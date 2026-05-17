@@ -24,7 +24,7 @@ function createConnection(): snowflake.Connection {
     if (!cfg.privateKey) {
       throw new Error(
         "Snowflake JWT auth selected but private key is missing. " +
-          "Set SNOWFLAKE_PRIVATE_KEY_PATH to your .p8 file or use SNOWFLAKE_AUTH=password."
+          "Set SNOWFLAKE_PRIVATE_KEY (inline PEM), SNOWFLAKE_PRIVATE_KEY_PATH, or SNOWFLAKE_AUTH=password."
       )
     }
     options.authenticator = "SNOWFLAKE_JWT"
@@ -36,7 +36,7 @@ function createConnection(): snowflake.Connection {
     options.password = cfg.password
   } else {
     throw new Error(
-      "Snowflake credentials incomplete. Set SNOWFLAKE_PASSWORD or SNOWFLAKE_PRIVATE_KEY_PATH."
+      "Snowflake credentials incomplete. Set SNOWFLAKE_PASSWORD or SNOWFLAKE_PRIVATE_KEY / SNOWFLAKE_PRIVATE_KEY_PATH."
     )
   }
 

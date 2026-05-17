@@ -134,7 +134,7 @@ This takes 10–30s per session and is a Browserbase infrastructure cost — not
 | `NEXT_PUBLIC_WS_URL` | `ws://localhost:3001` | Frontend WebSocket URL |
 | `SNOWFLAKE_ENABLED` | auto | Set `false` to disable; needs account + user + password/key |
 | `SNOWFLAKE_ACCOUNT` | — | Account locator (e.g. `xy12345.us-east-1`) |
-| `SNOWFLAKE_USER` / `SNOWFLAKE_PASSWORD` | — | Writer creds (or `SNOWFLAKE_PRIVATE_KEY` for JWT) |
+| `SNOWFLAKE_USER` / `SNOWFLAKE_PASSWORD` | — | Writer creds, or JWT via `SNOWFLAKE_PRIVATE_KEY` (inline PEM) / `SNOWFLAKE_PRIVATE_KEY_PATH` |
 | `SNOWFLAKE_WAREHOUSE` | `COMPUTE_WH` | Warehouse for queries |
 | `SNOWFLAKE_DATABASE` / `SNOWFLAKE_SCHEMA` | `SWARM_WALLET` / `APP` | Object namespace |
 

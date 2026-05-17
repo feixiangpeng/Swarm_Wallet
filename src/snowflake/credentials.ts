@@ -7,6 +7,20 @@ function normalizePem(value: string): string {
   return value.replace(/\\n/g, "\n").trim()
 }
 
+/** Strip .env quoting (including accidental triple-quotes around multiline PEM). */
+function stripEnvQuotes(value: string): string {
+  let v = value.trim()
+  if (v.startsWith('"""') && v.endsWith('"""')) {
+    v = v.slice(3, -3).trim()
+  } else if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim()
+  }
+  return v
+}
+
 function looksLikePem(value: string): boolean {
   return /-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(value)
 }
@@ -38,8 +52,9 @@ export function loadPrivateKeyPem(): string | undefined {
 
   if (!inline) return undefined
 
-  if (looksLikePem(inline)) return normalizePem(inline)
-  if (looksLikeKeyPath(inline)) return readKeyFile(inline)
+  const pem = stripEnvQuotes(inline)
+  if (looksLikePem(pem)) return normalizePem(pem)
+  if (looksLikeKeyPath(pem)) return readKeyFile(pem)
 
   return undefined
 }
