@@ -1711,6 +1711,16 @@ body::after {
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* Projector-style reveal: a thin horizontal slit appears in the
+   middle, expands sideways to a full-width line, then unfolds
+   outward both up and down to expose the full frame. */
+@keyframes agent-node-open {
+  0%   { opacity: 0; clip-path: inset(50% 50% 50% 50% round 10px); }
+  18%  { opacity: 1; clip-path: inset(49% 45% 49% 45% round 10px); }
+  45%  { opacity: 1; clip-path: inset(49% 0   49% 0   round 10px); }
+  100% { opacity: 1; clip-path: inset(0   0   0   0   round 10px); }
+}
+
 @keyframes skeleton-shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -1723,40 +1733,41 @@ body::after {
 
 .agent-node {
   position: relative;
-  border-radius: 50%;
+  border-radius: 10px;
   overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.1);
-  background: var(--bg-elevated);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(13, 13, 21, 0.94);
   display: flex;
   flex-direction: column;
-  animation: node-in 0.4s cubic-bezier(0.16,1,0.3,1) both;
+  animation: agent-node-open 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
   transition: border-color 0.25s, box-shadow 0.25s;
+  backdrop-filter: blur(8px);
 }
 
 .agent-node[data-status="navigating"] {
-  border-color: rgba(245,158,11,0.5);
-  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+  border-color: rgba(245,158,11,0.55);
+  box-shadow: 0 0 22px rgba(245,158,11,0.18);
 }
 .agent-node[data-status="queued"],
 .agent-node[data-status="launching"] {
   border-color: rgba(245,158,11,0.4);
-  box-shadow: 0 0 0 3px rgba(245,158,11,0.08);
+  box-shadow: 0 0 18px rgba(245,158,11,0.12);
 }
 .agent-node[data-status="searching"] {
-  border-color: rgba(96,165,250,0.5);
-  box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
+  border-color: rgba(96,165,250,0.55);
+  box-shadow: 0 0 22px rgba(96,165,250,0.18);
 }
 .agent-node[data-status="extracting"] {
-  border-color: rgba(167,139,250,0.5);
-  box-shadow: 0 0 0 3px rgba(167,139,250,0.1), 0 0 20px rgba(167,139,250,0.06);
+  border-color: rgba(167,139,250,0.55);
+  box-shadow: 0 0 22px rgba(167,139,250,0.18);
 }
 .agent-node[data-status="done"] {
-  border-color: rgba(52,211,153,0.5);
-  box-shadow: 0 0 0 3px rgba(52,211,153,0.12);
+  border-color: rgba(52,211,153,0.55);
+  box-shadow: 0 0 22px rgba(52,211,153,0.18);
 }
 .agent-node[data-status="launch_failed"],
 .agent-node[data-status="error"] {
-  border-color: rgba(248,113,113,0.45);
+  border-color: rgba(248,113,113,0.5);
 }
 
 .agent-node-placeholder {
@@ -1765,34 +1776,69 @@ body::after {
   opacity: 0.55;
 }
 
-/* Live pulse dot */
-.agent-node-live {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
+/* Browser-chrome header */
+.agent-node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  flex-shrink: 0;
+}
+
+.agent-node-dots {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.agent-node-dots span {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  z-index: 10;
+  background: rgba(255,255,255,0.18);
+}
+
+.agent-node-dots span:nth-child(1) { background: #f87171; }
+.agent-node-dots span:nth-child(2) { background: #f59e0b; }
+.agent-node-dots span:nth-child(3) { background: #34d399; }
+
+.agent-node-site {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-node-status {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.agent-node-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
   animation: live-pulse 1.6s ease-in-out infinite;
 }
 
-/* Outer ring */
-.agent-node-ring {
-  position: absolute;
-  inset: -5px;
-  border-radius: 50%;
-  border: 1px solid var(--node-color, transparent);
-  opacity: 0.2;
-  pointer-events: none;
-}
-
-/* Iframe fills the circle */
+/* Iframe / screenshot area fills remaining space */
 .agent-node-screen {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
   overflow: hidden;
-  border-radius: 50%;
+  background: #0a0a10;
 }
 
 .agent-node-screenshot {
@@ -1801,25 +1847,24 @@ body::after {
   display: block;
   object-fit: cover;
   object-position: top left;
-  opacity: 0.72;
+  opacity: 0.85;
 }
 
 .agent-node-iframe {
-  width: 300%;
-  height: 300%;
-  margin-left: -100%;
-  margin-top: -100%;
+  width: 285%;
+  height: 285%;
   border: none;
-  transform-origin: center center;
-  transform: scale(0.34);
+  transform-origin: top left;
+  transform: scale(0.35);
   pointer-events: none;
+  display: block;
 }
 
 /* Skeleton loading state */
 .node-skeleton {
   width: 100%;
   height: 100%;
-  padding: 20% 12%;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -1844,56 +1889,21 @@ body::after {
   animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
-/* Label at bottom of node */
-.agent-node-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 36%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  background: linear-gradient(to top, rgba(10,10,15,0.95) 60%, transparent);
-  padding: 0 4px 4px;
-  z-index: 5;
-}
-
-.agent-node-site {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text);
-  max-width: 90%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-}
-
-.agent-node-status {
-  font-size: 8px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  display: block;
-}
-
-/* Price chip when done */
+/* Price chip when done — sits in the top-right corner of the screen area */
 .agent-node-finding {
   position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 30px;
+  right: 6px;
   background: var(--green);
   color: #0a0a0f;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 99px;
   white-space: nowrap;
   z-index: 10;
   animation: slide-down 0.3s ease;
+  box-shadow: 0 2px 8px rgba(52,211,153,0.35);
 }
 
 /* ─── Right panel ─── */
@@ -2770,14 +2780,15 @@ body::after {
 /* expand hint on node hover */
 .agent-node-expand {
   position: absolute;
-  top: 5px;
-  left: 5px;
-  font-size: 10px;
-  color: rgba(255,255,255,0.4);
+  bottom: 6px;
+  right: 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
   opacity: 0;
   transition: opacity var(--transition);
   pointer-events: none;
   line-height: 1;
+  z-index: 6;
 }
 
 .agent-node:hover .agent-node-expand { opacity: 1; }

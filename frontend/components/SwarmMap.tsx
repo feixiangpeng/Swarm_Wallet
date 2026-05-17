@@ -51,13 +51,13 @@ function NodeSkeleton() {
 }
 
 // Card that pops up above a node when it has a finding
-function FindingCard({ agent, cx, cy, radius }: { agent: AgentState; cx: number; cy: number; radius: number }) {
+function FindingCard({ agent, cx, cy, height }: { agent: AgentState; cx: number; cy: number; height: number }) {
   if (!agent.finding) return null
   const { finding } = agent
   const cardW = 180
   const cardH = finding.highlight ? 88 : 64
   const x = cx - cardW / 2
-  const y = cy - radius - cardH - 14
+  const y = cy - height / 2 - cardH - 14
 
   return (
     <foreignObject x={x} y={y} width={cardW} height={cardH + 16} style={{ overflow: "visible" }}>
@@ -82,27 +82,34 @@ function FindingCard({ agent, cx, cy, radius }: { agent: AgentState; cx: number;
   )
 }
 
-function AgentNode({ agent, cx, cy, radius, onExpand }: {
-  agent: AgentState; cx: number; cy: number; radius: number
+function AgentNode({ agent, cx, cy, width, height, onExpand }: {
+  agent: AgentState; cx: number; cy: number; width: number; height: number
   onExpand: (agent: AgentState) => void
 }) {
   const color = STATUS_COLOR[agent.status] ?? "#475569"
   const isLive = !["done", "error", "launch_failed"].includes(agent.status)
-  const d = radius * 2
 
   return (
     <>
-      {agent.status === "done" && <FindingCard agent={agent} cx={cx} cy={cy} radius={radius} />}
-      <foreignObject x={cx - radius} y={cy - radius} width={d} height={d} style={{ overflow: "visible" }}>
+      {agent.status === "done" && <FindingCard agent={agent} cx={cx} cy={cy} height={height} />}
+      <foreignObject x={cx - width / 2} y={cy - height / 2} width={width} height={height} style={{ overflow: "visible" }}>
         <div
           className="agent-node"
           data-status={agent.status}
-          style={{ "--node-color": color, width: d, height: d, cursor: "pointer" } as React.CSSProperties}
+          style={{ "--node-color": color, width, height, cursor: "pointer" } as React.CSSProperties}
           title={`${agent.site} — click to expand`}
           onClick={() => onExpand(agent)}
         >
-          <div className="agent-node-ring" />
-          {isLive && <div className="agent-node-live" style={{ background: color }} />}
+          <div className="agent-node-header">
+            <span className="agent-node-dots" aria-hidden>
+              <span /><span /><span />
+            </span>
+            <span className="agent-node-site">{agent.site.replace("www.", "")}</span>
+            <span className="agent-node-status" style={{ color }}>
+              {isLive && <span className="agent-node-live-dot" style={{ background: color }} />}
+              {STATUS_LABEL[agent.status] ?? agent.status}
+            </span>
+          </div>
           <div className="agent-node-screen">
             {(agent as AgentState & { screenshot?: string }).screenshot ? (
               <img className="agent-node-screenshot" src={(agent as AgentState & { screenshot?: string }).screenshot} alt="" />
@@ -111,10 +118,6 @@ function AgentNode({ agent, cx, cy, radius, onExpand }: {
             ) : (
               <NodeSkeleton />
             )}
-          </div>
-          <div className="agent-node-label">
-            <span className="agent-node-site">{agent.site.replace("www.", "")}</span>
-            <span className="agent-node-status" style={{ color }}>{STATUS_LABEL[agent.status] ?? agent.status}</span>
           </div>
           {agent.finding && (
             <div className="agent-node-finding">
@@ -129,16 +132,18 @@ function AgentNode({ agent, cx, cy, radius, onExpand }: {
   )
 }
 
-function PlaceholderNode({ cx, cy, radius, label, delay }: { cx: number; cy: number; radius: number; label: string; delay: number }) {
-  const d = radius * 2
+function PlaceholderNode({ cx, cy, width, height, label, delay }: { cx: number; cy: number; width: number; height: number; label: string; delay: number }) {
   return (
-    <foreignObject x={cx - radius} y={cy - radius} width={d} height={d} style={{ overflow: "visible" }}>
-      <div className="agent-node agent-node-placeholder" style={{ width: d, height: d, animationDelay: `${delay}s` } as React.CSSProperties}>
-        <div className="agent-node-screen"><NodeSkeleton /></div>
-        <div className="agent-node-label">
+    <foreignObject x={cx - width / 2} y={cy - height / 2} width={width} height={height} style={{ overflow: "visible" }}>
+      <div className="agent-node agent-node-placeholder" style={{ width, height, animationDelay: `${delay}s` } as React.CSSProperties}>
+        <div className="agent-node-header">
+          <span className="agent-node-dots" aria-hidden>
+            <span /><span /><span />
+          </span>
           <span className="agent-node-site">{label}</span>
           <span className="agent-node-status" style={{ color: "#f59e0b" }}>queued</span>
         </div>
+        <div className="agent-node-screen"><NodeSkeleton /></div>
       </div>
     </foreignObject>
   )
@@ -188,9 +193,10 @@ export default function SwarmMap({ agents, activity, status, query }: {
   const { w, h } = dims
   const cx = w / 2
   const cy = h / 2
-  const nodeR    = Math.min(Math.max(w / 10, 52), 74)
-  const orbitR   = Math.min(w, h) * 0.36
-  const coreR    = nodeR * 1.05
+  const nodeW    = Math.min(Math.max(w / 5.5, 160), 220)
+  const nodeH    = Math.round(nodeW * 0.72)
+  const orbitR   = Math.min(w, h) * 0.40
+  const coreR    = Math.min(Math.max(w / 11, 52), 72)
 
   const activeStage = status === "done" ? "complete" : status === "error" ? "error" : (activity.at(-1)?.stage ?? "planning")
   const completed   = agents.filter(a => a.status === "done").length
@@ -275,10 +281,10 @@ export default function SwarmMap({ agents, activity, status, query }: {
             const nx = cx + Math.cos(angle) * orbitR
             const ny = cy + Math.sin(angle) * orbitR
             if ("agentId" in item) {
-              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} radius={nodeR} onExpand={onExpand} />
+              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} width={nodeW} height={nodeH} onExpand={onExpand} />
             }
             const p = item as { _placeholder: boolean; label: string }
-            return <PlaceholderNode key={p.label} cx={nx} cy={ny} radius={nodeR} label={p.label} delay={i * 0.15} />
+            return <PlaceholderNode key={p.label} cx={nx} cy={ny} width={nodeW} height={nodeH} label={p.label} delay={i * 0.15} />
           })}
         </svg>
       </div>
