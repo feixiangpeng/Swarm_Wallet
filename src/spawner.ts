@@ -8,19 +8,28 @@ export interface LiveAgent {
   replayUrl: string
 }
 
+const MAX_BROWSER_SESSIONS = Number(process.env.MAX_BROWSER_SESSIONS ?? 4)
+
 export async function spawnAgents(agents: AgentPlan[]): Promise<LiveAgent[]> {
-  return Promise.all(
-    agents.map(async (plan) => {
+  const selectedAgents = agents.slice(0, MAX_BROWSER_SESSIONS)
+  const results: LiveAgent[] = []
+
+  for (const plan of selectedAgents) {
+    try {
       const session = createBrowserbaseSession()
       await session.init()
 
       const sessionId = session.browserbaseSessionID ?? "unknown"
-      return {
+      results.push({
         id: `${plan.role}::${plan.site}`,
         plan,
         session,
         replayUrl: `https://browserbase.com/sessions/${sessionId}`,
-      }
-    })
-  )
+      })
+    } catch (err) {
+      console.error(`Failed to launch ${plan.site}:`, err)
+    }
+  }
+
+  return results
 }

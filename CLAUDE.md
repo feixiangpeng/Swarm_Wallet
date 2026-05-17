@@ -4,6 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+Use the project Node version before running commands:
+
+```bash
+source ~/.nvm/nvm.sh
+nvm use                 # reads .nvmrc; currently Node 22.13.0
+```
+
 ### Backend (root)
 ```bash
 npm run smoke          # verify Browserbase + Wafer keys work end-to-end
@@ -29,7 +36,7 @@ planSwarm() → spawnAgents() → runAgent() × N (parallel) → synthesize()
 ```
 
 1. **Planner** (`src/planner.ts`) — single Wafer call, returns N `AgentPlan` objects (site + role + strategy string).
-2. **Spawner** (`src/spawner.ts`) — opens all N Browserbase sessions simultaneously via `Promise.all`. No cap.
+2. **Spawner** (`src/spawner.ts`) — launches up to `MAX_BROWSER_SESSIONS` Browserbase sessions sequentially. Default cap is `4` to avoid Browserbase quota/concurrency failures. Failed launches are logged and skipped; if no sessions launch, `src/main.ts` throws a user-facing error.
 3. **Agents** (`src/agent.ts`) — each agent navigates freely (no semaphore), but every `act()` and `extract()` call is gated through `llm.run()` from `src/semaphore.ts`. Agents are unaware of the semaphore.
 4. **Coordinator** (`src/coordinator.ts`) — single Wafer call after all agents finish, synthesizes findings into a `Verdict`.
 
@@ -39,28 +46,57 @@ planSwarm() → spawnAgents() → runAgent() × N (parallel) → synthesize()
 
 ### WebSocket contract
 
-The server (`src/server.ts`) emits two event shapes that `frontend/hooks/useSwarm.ts` consumes:
+The server (`src/server.ts`) emits three event shapes that `frontend/hooks/useSwarm.ts` consumes:
 
 ```ts
+{ type: "swarm_event", stage, message, at }
 { type: "agent_update", agentId, site, role, status, replayUrl, finding? }
 { type: "verdict", plan, findings, verdict, replayUrls }
 ```
 
+`swarm_event` drives the scanning UI lifecycle (`planning`, `spawning`, `running`, `synthesizing`, `complete`).
 `agentId` is `"role::site"` (e.g. `"price::amazon.com"`). The frontend keys its agent state map on this.
 
 ### Frontend state
 
-`useSwarm.ts` maintains a `Map<agentId, AgentState>` built from streaming `agent_update` events. Each `AgentCard` renders a live Browserbase replay as an `<iframe src={replayUrl}>`.
+`useSwarm.ts` maintains streaming agent state, scan activity, the active query, verdict state, and user-facing errors.
+
+The active/running UI is centered on `frontend/components/SwarmMap.tsx`, which renders:
+
+- a central target bubble with the query and current stage
+- placeholder planning bubbles before agents exist
+- live agent bubbles once `agent_update` events arrive
+- a telemetry panel with progress, counts, and recent activity
+
+`AgentGrid` / `AgentCard` still render detailed Browserbase replay cards below the map once agents exist.
 
 ### Wafer / model config
 
-All LLM calls use `model: "deepseek-v4"` via `baseURL: "https://pass.wafer.ai/v1"`. The OpenAI SDK is used as the client. Stagehand sessions also receive the Wafer base URL and key at session creation time in `src/spawner.ts`.
+Planner and coordinator calls use the OpenAI SDK against Wafer:
+
+```ts
+model: "qwen3.6-max-preview"
+baseURL: "https://pass.wafer.ai/v1"
+```
+
+Stagehand v3 requires provider/model naming for built-in AI SDK clients, but Wafer is OpenAI-chat-compatible and does not support the `/responses` endpoint used by Stagehand's AI SDK OpenAI path. `src/stagehand.ts` therefore creates a `CustomOpenAIClient` with:
+
+```ts
+modelName: "qwen3.6-max-preview"
+baseURL: "https://pass.wafer.ai/v1"
+disableAPI: true
+```
+
+Do not remove `disableAPI: true`; otherwise Stagehand may route through its hosted API/OpenAI provider path and reject the Wafer key or hit the wrong endpoint.
 
 ### Environment variables
 
 - `BROWSERBASE_API_KEY` / `BROWSERBASE_PROJECT_ID` — used in `src/stagehand.ts`
-- `WAFER_API_KEY` — used in `src/planner.ts`, `src/coordinator.ts`, and `src/spawner.ts`
+- `WAFER_API_KEY` — used in `src/planner.ts`, `src/coordinator.ts`, and `src/stagehand.ts`
+- `MAX_BROWSER_SESSIONS` — optional backend cap for Browserbase sessions; default `4`
 - `NEXT_PUBLIC_WS_URL` — frontend only (default: `ws://localhost:3001`)
+
+Do not commit real API keys. `.env.example` should contain placeholders only.
 
 ### Vercel / WebSocket note
 

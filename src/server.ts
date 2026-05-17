@@ -11,6 +11,8 @@ wss.on("connection", (ws) => {
     try {
       const result = await swarmSearch(query, (update) => {
         ws.send(JSON.stringify({ type: "agent_update", ...update }))
+      }, (event) => {
+        ws.send(JSON.stringify({ type: "swarm_event", ...event, at: Date.now() }))
       })
       ws.send(JSON.stringify({ type: "verdict", ...result }))
     } catch (err) {

@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { useSwarm } from "@/hooks/useSwarm"
 import AgentGrid from "@/components/AgentGrid"
 import Verdict from "@/components/Verdict"
+import SwarmMap from "@/components/SwarmMap"
 
 const HINTS = [
   "Sony WH-1000XM5",
@@ -16,7 +17,7 @@ const HINTS = [
 export default function Home() {
   const [input, setInput]     = useState("")
   const inputRef              = useRef<HTMLInputElement>(null)
-  const { agents, verdict, status, search } = useSwarm()
+  const { agents, verdict, status, activity, query, error, search } = useSwarm()
 
   const isActive = status !== "idle"
 
@@ -91,24 +92,23 @@ export default function Home() {
         {SearchForm}
       </header>
 
-      {agentsTotal > 0 && (
-        <div className="status-bar">
-          <div className={`status-indicator ${status}`} />
-          <span className="status-bar-count">
-            {agentsDone}/{agentsTotal} agents complete
-          </span>
-          <span>·</span>
-          <span>{input}</span>
-        </div>
-      )}
+      <div className="status-bar">
+        <div className={`status-indicator ${status}`} />
+        <span className="status-bar-count">
+          {agentsTotal > 0 ? `${agentsDone}/${agentsTotal} agents complete` : "swarm initializing"}
+        </span>
+        <span>·</span>
+        <span>{query || input}</span>
+      </div>
 
       {status === "error" && (
         <div className="error-banner">
-          connection error — is the backend running on :3001?
+          {error ?? "swarm failed"}
         </div>
       )}
 
       <main className="main-content">
+        <SwarmMap agents={agents} activity={activity} status={status} query={query || input} />
         {verdict && <Verdict verdict={verdict} />}
         {agents.length > 0 && <AgentGrid agents={agents} />}
       </main>

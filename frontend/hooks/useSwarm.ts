@@ -6,9 +6,16 @@ import type { Verdict } from "../../src/coordinator"
 import type { SwarmPlan } from "../../src/planner"
 
 export type SwarmStatus = "idle" | "running" | "done" | "error"
+export type SwarmStage = "planning" | "spawning" | "running" | "synthesizing" | "complete"
 
 export interface AgentState extends AgentUpdate {
   finding?: Finding
+}
+
+export interface SwarmActivity {
+  stage: SwarmStage
+  message: string
+  at: number
 }
 
 export interface SwarmResult {
@@ -19,11 +26,15 @@ export interface SwarmResult {
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001"
+const CONNECTION_ERROR = "connection error - is the backend running on :3001?"
 
 export function useSwarm() {
   const [agents, setAgents]   = useState<AgentState[]>([])
   const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [status, setStatus]   = useState<SwarmStatus>("idle")
+  const [activity, setActivity] = useState<SwarmActivity[]>([])
+  const [query, setQuery] = useState("")
+  const [error, setError] = useState<string | null>(null)
   const wsRef      = useRef<WebSocket | null>(null)
   const runningRef = useRef(false)  // avoids stale closure in onclose
 
@@ -32,6 +43,9 @@ export function useSwarm() {
 
     setAgents([])
     setVerdict(null)
+    setActivity([])
+    setQuery(query)
+    setError(null)
     setStatus("running")
     runningRef.current = true
 
@@ -45,6 +59,14 @@ export function useSwarm() {
 
       if (msg.type === "agent_update") {
         const update = msg as AgentUpdate
+        setActivity(prev => [
+          ...prev.slice(-7),
+          {
+            stage: update.status === "done" ? "running" : "running",
+            message: `${update.site} · ${update.status}`,
+            at: Date.now(),
+          },
+        ])
         setAgents(prev => {
           const idx = prev.findIndex(a => a.agentId === update.agentId)
           if (idx === -1) return [...prev, update as AgentState]
@@ -54,6 +76,17 @@ export function useSwarm() {
         })
       }
 
+      if (msg.type === "swarm_event") {
+        setActivity(prev => [
+          ...prev.slice(-7),
+          {
+            stage: msg.stage as SwarmStage,
+            message: msg.message as string,
+            at: (msg.at as number) ?? Date.now(),
+          },
+        ])
+      }
+
       if (msg.type === "verdict") {
         setVerdict(msg.verdict as Verdict)
         setStatus("done")
@@ -61,12 +94,22 @@ export function useSwarm() {
       }
 
       if (msg.type === "error") {
+        setError((msg.message as string) || "swarm failed")
+        setActivity(prev => [
+          ...prev.slice(-7),
+          {
+            stage: "running",
+            message: (msg.message as string) || "swarm failed",
+            at: Date.now(),
+          },
+        ])
         setStatus("error")
         runningRef.current = false
       }
     }
 
     ws.onerror = () => {
+      setError(CONNECTION_ERROR)
       setStatus("error")
       runningRef.current = false
     }
@@ -79,5 +122,5 @@ export function useSwarm() {
     }
   }, [])
 
-  return { agents, verdict, status, search }
+  return { agents, verdict, status, activity, query, error, search }
 }

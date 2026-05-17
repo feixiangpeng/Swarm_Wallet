@@ -1,0 +1,7 @@
+# This project does not currently have Python runtime dependencies.
+# It is a Node.js/TypeScript app; install dependencies with:
+#
+#   npm install
+#   cd frontend && npm install
+#
+# Use Node >= 22.12.0 for the backend Stagehand dependency.
