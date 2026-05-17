@@ -9,6 +9,7 @@
     "setup:context": "node --env-file=.env --import tsx src/setup-context.ts",
     "server": "node --env-file=.env --import tsx src/server.ts",
     "server:4": "MAX_BROWSER_SESSIONS=4 PREWARM_BROWSERBASE_SESSIONS=4 node --env-file=.env --import tsx src/server.ts",
+    "server:fast": "MAX_BROWSER_SESSIONS=4 LLM_CONCURRENCY=4 PREWARM_BROWSERBASE=false BROWSERBASE_FAST_SESSIONS=true EXTRACT_TIMEOUT_MS=12000 node --env-file=.env --import tsx src/server.ts",
     "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts",
     "snowflake:migrate": "node --env-file=.env --import tsx src/snowflake/run-migrate.ts",
     "snowflake:check-cortex": "node --env-file=.env --import tsx src/snowflake/check-cortex.ts",

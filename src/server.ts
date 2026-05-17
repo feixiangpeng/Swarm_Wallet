@@ -2,7 +2,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from "http"
 import { WebSocketServer } from "ws"
 import { swarmSearch, SwarmCancelledError } from "./main"
 import { startSessionPrewarm, stopSessionPrewarm } from "./sessionPool"
-import { getMaxBrowserSessions } from "./config"
+import {
+  getExtractTimeoutMs,
+  getFastBrowserbaseSessions,
+  getLlmConcurrency,
+  getMaxBrowserSessions,
+} from "./config"
 import { resolveQueryFromUrl } from "./urlMode"
 import {
   isSnowflakeEnabled,
@@ -175,7 +180,12 @@ wss.on("connection", (ws) => {
 
 server.listen(3001, () => {
   console.log("WS server ready on :3001")
-  console.log(`[config] MAX_BROWSER_SESSIONS=${getMaxBrowserSessions()}`)
+  console.log(
+    `[config] MAX_BROWSER_SESSIONS=${getMaxBrowserSessions()} ` +
+    `LLM_CONCURRENCY=${getLlmConcurrency()} ` +
+    `EXTRACT_TIMEOUT_MS=${getExtractTimeoutMs()} ` +
+    `BROWSERBASE_FAST_SESSIONS=${getFastBrowserbaseSessions()}`
+  )
   console.log(`[snowflake] ${isSnowflakeEnabled() ? "enabled" : "disabled"}`)
 })
 

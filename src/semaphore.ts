@@ -1,3 +1,5 @@
+import { getLlmConcurrency } from "./config"
+
 export class Semaphore {
   private permits: number
   private queue: Array<() => void> = []
@@ -23,4 +25,4 @@ export class Semaphore {
   }
 }
 
-export const llm = new Semaphore(3)
+export const llm = new Semaphore(getLlmConcurrency())

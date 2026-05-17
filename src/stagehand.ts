@@ -1,5 +1,6 @@
 import { CustomOpenAIClient, V3 } from "@browserbasehq/stagehand"
 import OpenAI from "openai"
+import { getFastBrowserbaseSessions } from "./config"
 
 export type { V3 }
 
@@ -7,6 +8,7 @@ export function createBrowserbaseSession() {
   const modelName = "qwen3.6-max-preview"
   const contextId = process.env.BROWSERBASE_CONTEXT_ID
   const projectId = process.env.BROWSERBASE_PROJECT_ID?.trim()
+  const fastSessions = getFastBrowserbaseSessions()
   const client = new OpenAI({
     baseURL: "https://pass.wafer.ai/v1",
     apiKey: process.env.WAFER_API_KEY!,
@@ -16,7 +18,7 @@ export function createBrowserbaseSession() {
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY!,
     ...(projectId ? { projectId } : {}),
-    browserbaseSessionCreateParams: {
+    ...(!fastSessions ? { browserbaseSessionCreateParams: {
       browserSettings: {
         ...(contextId ? { context: { id: contextId, persist: true } } : {}),
         solveCaptchas: true,
@@ -28,7 +30,7 @@ export function createBrowserbaseSession() {
         },
       },
       proxies: [{ type: "browserbase", geolocation: { country: "US" } }],
-    },
+    } } : {}),
     llmClient: new CustomOpenAIClient({ modelName, client }),
     verbose: 0,
     disablePino: true,

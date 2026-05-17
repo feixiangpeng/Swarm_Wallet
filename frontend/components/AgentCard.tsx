@@ -11,11 +11,20 @@ const STATUS_LABEL: Record<string, string> = {
   error:      "error",
 }
 
-export default function AgentCard({ agent, index }: { agent: AgentState; index: number }) {
+export default function AgentCard({
+  agent,
+  index,
+  compact = false,
+}: {
+  agent: AgentState
+  index: number
+  compact?: boolean
+}) {
   return (
     <div
       className="agent-card"
       data-status={agent.status}
+      data-compact={compact ? "true" : "false"}
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className="card-header">

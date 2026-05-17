@@ -54,14 +54,17 @@ function NodeSkeleton() {
 // Positioned radially outward from the swarm core so cards never collide with
 // the orbit ring or neighbouring nodes regardless of where on the circle the
 // node sits.
-function FindingCard({ agent, cx, cy, width, height, coreX, coreY }: {
+function FindingCard({ agent, cx, cy, width, height, coreX, coreY, canvasW, canvasH }: {
   agent: AgentState; cx: number; cy: number; width: number; height: number
-  coreX: number; coreY: number
+  coreX: number; coreY: number; canvasW: number; canvasH: number
 }) {
   if (!agent.finding) return null
   const { finding } = agent
-  const cardW = 180
-  const cardH = finding.highlight ? 88 : 64
+  const cardW = 236
+  const cardH = finding.highlight ? 116 : 84
+  const edgePad = 16
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), Math.max(min, max))
 
   // Unit vector from core to node — this is the "outward" direction.
   const dx = cx - coreX
@@ -76,11 +79,13 @@ function FindingCard({ agent, cx, cy, width, height, coreX, coreY }: {
   const clearance = Math.abs(ux) * (width / 2) + Math.abs(uy) * (height / 2) + 18
   const anchorX = cx + ux * clearance
   const anchorY = cy + uy * clearance
-  const x = anchorX + ux * (cardW / 2) - cardW / 2
-  const y = anchorY + uy * (cardH / 2) - cardH / 2
+  const rawX = anchorX + ux * (cardW / 2) - cardW / 2
+  const rawY = anchorY + uy * (cardH / 2) - cardH / 2
+  const x = clamp(rawX, edgePad, canvasW - cardW - edgePad)
+  const y = clamp(rawY, edgePad, canvasH - cardH - edgePad)
 
   return (
-    <foreignObject x={x} y={y} width={cardW} height={cardH + 16} style={{ overflow: "visible" }}>
+    <foreignObject x={x} y={y} width={cardW} height={cardH} style={{ overflow: "visible" }}>
       <div className="finding-card">
         <div className="finding-card-header">
           <span className="finding-card-site">{agent.site.replace("www.", "")}</span>
@@ -101,9 +106,9 @@ function FindingCard({ agent, cx, cy, width, height, coreX, coreY }: {
   )
 }
 
-function AgentNode({ agent, cx, cy, width, height, coreX, coreY, openDelay, onExpand }: {
+function AgentNode({ agent, cx, cy, width, height, coreX, coreY, canvasW, canvasH, openDelay, onExpand }: {
   agent: AgentState; cx: number; cy: number; width: number; height: number
-  coreX: number; coreY: number
+  coreX: number; coreY: number; canvasW: number; canvasH: number
   openDelay: number
   onExpand: (agent: AgentState) => void
 }) {
@@ -113,11 +118,16 @@ function AgentNode({ agent, cx, cy, width, height, coreX, coreY, openDelay, onEx
   // it during the multi-second Browserbase boot, then fade out once content
   // actually renders.
   const [iframeReady, setIframeReady] = useState(false)
+  const [screenshotReady, setScreenshotReady] = useState(false)
   useEffect(() => { setIframeReady(false) }, [agent.replayUrl])
+  useEffect(() => { setScreenshotReady(false) }, [agent.screenshot])
+
+  const screenshot = (agent as AgentState & { screenshot?: string }).screenshot
+  const resultReady = agent.status === "done" && Boolean(agent.finding) && (!screenshot || screenshotReady)
 
   return (
     <>
-      {agent.status === "done" && <FindingCard agent={agent} cx={cx} cy={cy} width={width} height={height} coreX={coreX} coreY={coreY} />}
+      {resultReady && <FindingCard agent={agent} cx={cx} cy={cy} width={width} height={height} coreX={coreX} coreY={coreY} canvasW={canvasW} canvasH={canvasH} />}
       <foreignObject x={cx - width / 2} y={cy - height / 2} width={width} height={height} style={{ overflow: "visible" }}>
         <div
           className="agent-node"
@@ -143,8 +153,14 @@ function AgentNode({ agent, cx, cy, width, height, coreX, coreY, openDelay, onEx
             </span>
           </div>
           <div className="agent-node-screen">
-            {(agent as AgentState & { screenshot?: string }).screenshot ? (
-              <img className="agent-node-screenshot" src={(agent as AgentState & { screenshot?: string }).screenshot} alt="" />
+            {screenshot ? (
+              <img
+                className="agent-node-screenshot"
+                src={screenshot}
+                alt=""
+                onLoad={() => setScreenshotReady(true)}
+                onError={() => setScreenshotReady(true)}
+              />
             ) : agent.replayUrl ? (
               <>
                 <iframe
@@ -162,7 +178,7 @@ function AgentNode({ agent, cx, cy, width, height, coreX, coreY, openDelay, onEx
               <NodeSkeleton />
             )}
           </div>
-          {agent.finding && (
+          {resultReady && agent.finding && (
             <div className="agent-node-finding">
               {agent.finding.price != null ? `$${agent.finding.price}` : "✓"}
             </div>
@@ -371,7 +387,7 @@ export default function SwarmMap({ agents, activity, status, query }: {
             const ny = cy + Math.sin(angle) * orbitR
             const openDelay = i * 0.08
             if ("agentId" in item) {
-              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} width={nodeW} height={nodeH} coreX={cx} coreY={cy} openDelay={openDelay} onExpand={onExpand} />
+              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} width={nodeW} height={nodeH} coreX={cx} coreY={cy} canvasW={w} canvasH={h} openDelay={openDelay} onExpand={onExpand} />
             }
             const p = item as { _placeholder: boolean; label: string }
             return <PlaceholderNode key={p.label} cx={nx} cy={ny} width={nodeW} height={nodeH} label={p.label} delay={openDelay} />
