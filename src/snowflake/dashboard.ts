@@ -15,6 +15,7 @@ export interface SnowflakeDashboard {
   semantic_enabled: boolean
   semantic_memory: SemanticMemoryViz | null
   recent_searches: Array<{
+    search_id: string
     query_text: string
     status: string
     finding_count: number | null
@@ -61,11 +62,23 @@ function str(v: unknown): string {
   return v == null ? "" : String(v)
 }
 
+/** Snowflake driver may return UPPER, lower, or mixed column names. */
+function field(row: Record<string, unknown>, name: string): unknown {
+  const u = name.toUpperCase()
+  const l = name.toLowerCase()
+  return row[u] ?? row[l] ?? row[name]
+}
+
+function strField(row: Record<string, unknown>, name: string): string {
+  return str(field(row, name))
+}
+
 export interface SemanticMemoryViz {
   model: string
   similarity_threshold: number
   findings_embedded: number
   embedded_queries: Array<{
+    search_id: string
     query_text: string
     finding_count: number | null
     completed_at: string | null
@@ -88,11 +101,14 @@ async function fetchSemanticMemoryViz(): Promise<SemanticMemoryViz | null> {
         `SELECT COUNT(*) AS N FROM FINDINGS WHERE FINDING_EMBEDDING IS NOT NULL`
       ),
       execute<{
+        SEARCH_ID: string
         QUERY_TEXT: string
         FINDING_COUNT: number
         COMPLETED_AT: string
       }>(
-        `SELECT QUERY_TEXT, FINDING_COUNT, COMPLETED_AT
+        `SELECT
+         SEARCH_ID AS SEARCH_ID,
+         QUERY_TEXT, FINDING_COUNT, COMPLETED_AT
          FROM SEARCHES
          WHERE QUERY_EMBEDDING IS NOT NULL AND STATUS = 'complete'
          ORDER BY COMPLETED_AT DESC NULLS LAST
@@ -127,7 +143,8 @@ async function fetchSemanticMemoryViz(): Promise<SemanticMemoryViz | null> {
       similarity_threshold: threshold,
       findings_embedded: num(findingsEmbeddedRows[0]?.N),
       embedded_queries: embeddedRows.map((r) => ({
-        query_text: str(r.QUERY_TEXT),
+        search_id: strField(r as Record<string, unknown>, "SEARCH_ID"),
+        query_text: strField(r as Record<string, unknown>, "QUERY_TEXT"),
         finding_count: r.FINDING_COUNT != null ? num(r.FINDING_COUNT) : null,
         completed_at: r.COMPLETED_AT != null ? str(r.COMPLETED_AT) : null,
       })),
@@ -158,6 +175,7 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
         (SELECT COUNT(*) FROM SEARCHES WHERE QUERY_EMBEDDING IS NOT NULL) AS SEARCHES_EMBEDDED`
     ),
     execute<{
+      SEARCH_ID: string
       QUERY_TEXT: string
       STATUS: string
       FINDING_COUNT: number
@@ -165,11 +183,11 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
       COMPLETED_AT: string
       HAS_EMBEDDING: boolean
     }>(
-      `SELECT QUERY_TEXT, STATUS, FINDING_COUNT, DURATION_MS, COMPLETED_AT,
+      `SELECT SEARCH_ID, QUERY_TEXT, STATUS, FINDING_COUNT, DURATION_MS, COMPLETED_AT,
         (QUERY_EMBEDDING IS NOT NULL) AS HAS_EMBEDDING
        FROM SEARCHES
        ORDER BY COMPLETED_AT DESC NULLS LAST
-       LIMIT 12`
+       LIMIT 24`
     ),
     execute<{
       SITE: string
@@ -249,14 +267,18 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
     },
     semantic_enabled: isSemanticSearchEnabled(),
     semantic_memory,
-    recent_searches: recent.map((r) => ({
-      query_text: str(r.QUERY_TEXT),
-      status: str(r.STATUS),
-      finding_count: r.FINDING_COUNT != null ? num(r.FINDING_COUNT) : null,
-      duration_ms: r.DURATION_MS != null ? num(r.DURATION_MS) : null,
-      completed_at: r.COMPLETED_AT != null ? str(r.COMPLETED_AT) : null,
-      has_embedding: Boolean(r.HAS_EMBEDDING),
-    })),
+    recent_searches: recent.map((r) => {
+      const row = r as Record<string, unknown>
+      return {
+        search_id: strField(row, "SEARCH_ID"),
+        query_text: strField(row, "QUERY_TEXT"),
+        status: strField(row, "STATUS"),
+        finding_count: field(row, "FINDING_COUNT") != null ? num(field(row, "FINDING_COUNT")) : null,
+        duration_ms: field(row, "DURATION_MS") != null ? num(field(row, "DURATION_MS")) : null,
+        completed_at: field(row, "COMPLETED_AT") != null ? str(field(row, "COMPLETED_AT")) : null,
+        has_embedding: Boolean(field(row, "HAS_EMBEDDING")),
+      }
+    }),
     site_reliability: reliability.map((r) => ({
       site: str(r.SITE),
       role: str(r.ROLE),

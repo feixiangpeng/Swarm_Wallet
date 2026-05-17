@@ -17,6 +17,7 @@ import {
   persistSearchError,
   snowflakeAsync,
   fetchSnowflakeDashboard,
+  deleteSearch,
   isSemanticSearchEnabled,
 } from "./snowflake/index"
 
@@ -71,13 +72,32 @@ async function handleHttp(req: IncomingMessage, res: ServerResponse) {
     return
   }
 
+  const deleteMatch = url.match(/^\/snowflake\/search\/([^/]+)$/)
+  if (req.method === "DELETE" && deleteMatch) {
+    if (!isSnowflakeEnabled()) {
+      json(res, 503, { error: "Snowflake not configured" })
+      return
+    }
+    try {
+      const result = await deleteSearch(decodeURIComponent(deleteMatch[1]))
+      if (!result.deleted) {
+        json(res, 404, { error: "Swarm not found", search_id: result.search_id })
+        return
+      }
+      json(res, 200, result)
+    } catch (err) {
+      json(res, 500, { error: String(err) })
+    }
+    return
+  }
+
   res.statusCode = 404
   res.end()
 }
 
 function setCors(res: ServerResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+  res.setHeader("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
 }
 

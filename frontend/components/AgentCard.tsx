@@ -8,6 +8,8 @@ const STATUS_LABEL: Record<string, string> = {
   extracting: "extracting",
   done:       "done",
   launch_failed: "launch failed",
+  blocked:    "blocked",
+  needs_verification: "verify",
   error:      "error",
 }
 
@@ -55,7 +57,7 @@ export default function AgentCard({
         )}
       </div>
 
-      {(agent.status === "error" || agent.status === "launch_failed") && (
+      {(agent.status === "error" || agent.status === "launch_failed" || agent.status === "blocked" || agent.status === "needs_verification") && (
         <div className="card-error">{agent.error ?? "agent failed - site may be unreachable"}</div>
       )}
 

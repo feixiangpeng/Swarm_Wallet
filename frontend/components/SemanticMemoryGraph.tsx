@@ -15,10 +15,34 @@ function circleLayout(n: number, cx: number, cy: number, r: number) {
   })
 }
 
-export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) {
-  const queries = data.embedded_queries.map((q) => q.query_text)
-  const index = new Map(queries.map((q, i) => [q, i]))
-  const positions = circleLayout(queries.length, 200, 160, 118)
+function itemKey(
+  item: { search_id: string; query_text: string },
+  index: number
+): string {
+  const id = item.search_id?.trim()
+  return id || `embed-${index}-${item.query_text}`
+}
+
+function labelPlacement(x: number, y: number) {
+  return {
+    x,
+    y: y + 26,
+    anchor: "middle" as const,
+  }
+}
+
+export default function SemanticMemoryGraph({
+  data,
+  onDelete,
+  deletingId,
+}: {
+  data: SemanticMemory
+  onDelete?: (searchId: string, queryText: string) => void
+  deletingId?: string | null
+}) {
+  const items = data.embedded_queries
+  const queryIndex = new Map(items.map((q, i) => [q.query_text, i]))
+  const positions = circleLayout(items.length, 200, 160, 118)
   const thresholdPct = Math.round(data.similarity_threshold * 100)
 
   return (
@@ -28,7 +52,7 @@ export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) 
         <p className="memory-semantic-desc">
           Query embeddings live in Snowflake <code>SEARCHES.QUERY_EMBEDDING</code> (768-dim Cortex
           vectors). Lines show cosine similarity ≥ {thresholdPct}% — same links used for planner
-          routing and verdict memory.
+          routing and verdict memory. Delete a swarm below to remove its vectors and rows.
         </p>
         <div className="memory-semantic-meta">
           <span className="memory-semantic-pill">{data.model}</span>
@@ -40,7 +64,7 @@ export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) 
         </div>
       </div>
 
-      {queries.length === 0 ? (
+      {items.length === 0 ? (
         <p className="memory-empty-block">
           No embeddings yet. Complete a swarm, then refresh — vectors are written after each run.
         </p>
@@ -61,8 +85,8 @@ export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) 
               </defs>
               <circle cx="200" cy="160" r="130" fill="url(#memory-graph-glow)" />
               {data.similar_pairs.map((pair) => {
-                const i = index.get(pair.query_a)
-                const j = index.get(pair.query_b)
+                const i = queryIndex.get(pair.query_a)
+                const j = queryIndex.get(pair.query_b)
                 if (i == null || j == null) return null
                 const a = positions[i]
                 const b = positions[j]
@@ -80,20 +104,43 @@ export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) 
                   />
                 )
               })}
-              {queries.map((q, i) => {
+              {items.map((item, i) => {
                 const p = positions[i]
+                const label = labelPlacement(p.x, p.y)
                 return (
-                  <g key={q} className="memory-semantic-node">
+                  <g key={itemKey(item, i)} className="memory-semantic-node">
                     <circle cx={p.x} cy={p.y} r="14" className="memory-semantic-node-dot" />
-                    <title>{q}</title>
+                    <text
+                      x={label.x}
+                      y={label.y}
+                      textAnchor={label.anchor}
+                      className="memory-semantic-node-label"
+                    >
+                      {truncate(item.query_text, 18)}
+                    </text>
+                    <title>{item.query_text}</title>
                   </g>
                 )
               })}
             </svg>
             <ul className="memory-semantic-legend">
-              {queries.map((q) => (
-                <li key={q} title={q}>
-                  {truncate(q)}
+              {items.map((item, i) => (
+                <li
+                  key={itemKey(item, i)}
+                  className="memory-semantic-legend-item"
+                  title={item.query_text}
+                >
+                  <span className="memory-semantic-legend-label">{truncate(item.query_text)}</span>
+                  {onDelete && (
+                    <button
+                      type="button"
+                      className="memory-delete-btn memory-delete-btn-compact"
+                      disabled={!item.search_id?.trim() || deletingId === item.search_id}
+                      onClick={() => onDelete(item.search_id, item.query_text)}
+                    >
+                      {deletingId === item.search_id ? "…" : "×"}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -103,7 +150,7 @@ export default function SemanticMemoryGraph({ data }: { data: SemanticMemory }) 
             <h3 className="memory-semantic-links-title">Similarity links</h3>
             {data.similar_pairs.length === 0 ? (
               <p className="memory-empty-block">
-                {queries.length < 2
+                {items.length < 2
                   ? "Need at least two embedded swarms to show links."
                   : `No pairs above ${thresholdPct}% yet — try rephrasing the same product.`}
               </p>

@@ -25,6 +25,8 @@ export {
 export type { SemanticSiteScore, SimilarSearch } from "./semantic"
 export { fetchSnowflakeDashboard } from "./dashboard"
 export type { SnowflakeDashboard } from "./dashboard"
+export { deleteSearch } from "./delete"
+export type { DeleteSearchResult } from "./delete"
 export { productKey } from "./normalize"
 export type {
   IntelligenceContext,

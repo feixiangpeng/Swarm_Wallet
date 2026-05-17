@@ -5,26 +5,30 @@ import type { AgentState, SwarmActivity, SwarmStatus } from "@/hooks/useSwarm"
 import NodeFullscreen from "./NodeFullscreen"
 
 const STATUS_COLOR: Record<string, string> = {
-  queued:       "#f59e0b",
-  launching:    "#f59e0b",
-  navigating:   "#f59e0b",
-  searching:    "#60a5fa",
-  extracting:   "#a78bfa",
-  done:         "#34d399",
-  launch_failed:"#f87171",
-  error:        "#f87171",
-  planning:     "#f59e0b",
+  queued:             "#f59e0b",
+  launching:          "#f59e0b",
+  navigating:         "#f59e0b",
+  searching:          "#60a5fa",
+  extracting:         "#a78bfa",
+  done:               "#34d399",
+  launch_failed:      "#f87171",
+  blocked:            "#f87171",
+  needs_verification: "#fb923c",
+  error:              "#f87171",
+  planning:           "#f59e0b",
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  queued:       "queued",
-  launching:    "launching",
-  navigating:   "opening",
-  searching:    "searching",
-  extracting:   "extracting",
-  done:         "done",
-  launch_failed:"failed",
-  error:        "failed",
+  queued:             "queued",
+  launching:          "launching",
+  navigating:         "opening",
+  searching:          "searching",
+  extracting:         "extracting",
+  done:               "done",
+  launch_failed:      "failed",
+  blocked:            "blocked",
+  needs_verification: "verify",
+  error:              "failed",
 }
 
 const STAGE_STEPS = ["planning", "spawning", "running", "synthesizing", "complete"] as const
@@ -210,6 +214,21 @@ function PlaceholderNode({ cx, cy, width, height, label, delay }: { cx: number; 
 
 const PLACEHOLDERS = ["retailers", "reviews", "deals", "price tracker"]
 
+interface GraphAlert {
+  id: string
+  message: string
+  kind: "info" | "warn" | "success" | "intervention"
+}
+
+interface InterventionNotice {
+  agentId: string
+  site: string
+  message: string
+}
+
+// Blocked/verification nodes fade out after this delay
+const BLOCKED_NODE_TTL_MS = 5000
+
 export default function SwarmMap({ agents, activity, status, query }: {
   agents: AgentState[]
   activity: SwarmActivity[]
@@ -222,6 +241,9 @@ export default function SwarmMap({ agents, activity, status, query }: {
   const [pulsing, setPulsing] = useState(false)
   const [expanded, setExpanded] = useState<AgentState | null>(null)
   const [pulses, setPulses] = useState<Array<{ key: string; nx: number; ny: number }>>([])
+  const [alerts, setAlerts] = useState<GraphAlert[]>([])
+  const [dismissedNodes, setDismissedNodes] = useState<Set<string>>(new Set())
+  const [interventions, setInterventions] = useState<InterventionNotice[]>([])
   const prevAgentCount = useRef(0)
   const prevStatusRef = useRef<Record<string, string>>({})
   const dimsRef = useRef(dims)
@@ -278,6 +300,41 @@ export default function SwarmMap({ agents, activity, status, query }: {
     return () => { timers.forEach(clearTimeout) }
   }, [agents])
 
+  // Fire graph alerts and intervention notices for notable status transitions
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+    agents.forEach(a => {
+      const prev = prevStatusRef.current[a.agentId]
+      if (prev === a.status) return
+
+      let alert: GraphAlert | null = null
+
+      if (a.status === "done" && a.finding?.price != null) {
+        alert = { id: `${a.agentId}-done-${Date.now()}`, message: `${a.site} — $${a.finding.price}`, kind: "success" }
+      } else if (a.status === "needs_verification") {
+        alert = { id: `${a.agentId}-verify-${Date.now()}`, message: `${a.site} needs verification`, kind: "intervention" }
+        setInterventions(prev => {
+          if (prev.find(x => x.agentId === a.agentId)) return prev
+          return [...prev, { agentId: a.agentId, site: a.site, message: `${a.site} is showing a verification challenge — search skipped.` }]
+        })
+        timers.push(setTimeout(() => setDismissedNodes(s => new Set([...s, a.agentId])), BLOCKED_NODE_TTL_MS))
+      } else if (a.status === "blocked") {
+        alert = { id: `${a.agentId}-blocked-${Date.now()}`, message: `${a.site} blocked — skipping`, kind: "warn" }
+        timers.push(setTimeout(() => setDismissedNodes(s => new Set([...s, a.agentId])), BLOCKED_NODE_TTL_MS))
+      } else if (a.status === "error" || a.status === "launch_failed") {
+        alert = { id: `${a.agentId}-err-${Date.now()}`, message: `${a.site} failed`, kind: "warn" }
+      }
+
+      if (alert) {
+        const id = alert.id
+        setAlerts(prev => [...prev.slice(-4), alert!])
+        timers.push(setTimeout(() => setAlerts(prev => prev.filter(x => x.id !== id)), 4000))
+      }
+    })
+    return () => timers.forEach(clearTimeout)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents])
+
   const { w, h } = dims
   const cx = w / 2
   const cy = h / 2
@@ -292,7 +349,8 @@ export default function SwarmMap({ agents, activity, status, query }: {
   const total       = agents.length
   const progress    = total > 0 ? ((completed + failed) / total) * 100 : activeStage === "planning" ? 8 : 18
   const visibleActivity = activity.slice(-5).reverse()
-  const items       = agents.length > 0 ? agents : PLACEHOLDERS.map(label => ({ _placeholder: true, label }))
+  const visibleAgents = agents.filter(a => !dismissedNodes.has(a.agentId))
+  const items       = visibleAgents.length > 0 ? visibleAgents : agents.length > 0 ? [] : PLACEHOLDERS.map(label => ({ _placeholder: true, label }))
 
   return (
   <>
@@ -394,6 +452,35 @@ export default function SwarmMap({ agents, activity, status, query }: {
           })}
         </svg>
       </div>
+
+      {/* Intervention notices — persistent until dismissed */}
+      {interventions.length > 0 && (
+        <div className="intervention-banner">
+          {interventions.map(n => (
+            <div key={n.agentId} className="intervention-row">
+              <span className="intervention-icon">⚠</span>
+              <span className="intervention-msg">{n.message}</span>
+              <button
+                className="intervention-dismiss"
+                onClick={() => setInterventions(prev => prev.filter(x => x.agentId !== n.agentId))}
+              >
+                dismiss
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Graph alerts */}
+      {alerts.length > 0 && (
+        <div className="graph-alerts">
+          {alerts.map(a => (
+            <div key={a.id} className={`graph-alert graph-alert-${a.kind}`}>
+              {a.kind === "success" ? "✓" : a.kind === "intervention" ? "⚠" : "⚠"} {a.message}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Right panel */}
       <aside className="swarm-panel">

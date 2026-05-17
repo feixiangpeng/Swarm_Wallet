@@ -17,6 +17,7 @@ export interface DashboardData {
     similarity_threshold: number
     findings_embedded: number
     embedded_queries: Array<{
+      search_id: string
       query_text: string
       finding_count: number | null
       completed_at: string | null
@@ -28,6 +29,7 @@ export interface DashboardData {
     }>
   } | null
   recent_searches: Array<{
+    search_id: string
     query_text: string
     status: string
     finding_count: number | null
@@ -95,6 +97,7 @@ export default function SnowflakeDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +117,42 @@ export default function SnowflakeDashboard() {
       setLoading(false)
     }
   }, [])
+
+  const deleteSwarm = useCallback(
+    async (searchId: string | undefined, queryText: string) => {
+      const id = searchId?.trim()
+      if (!id) {
+        setError(
+          "Missing search id for this row. Restart the backend (npm run server) and hard-refresh /memory."
+        )
+        return
+      }
+
+      const ok = window.confirm(
+        `Delete swarm "${queryText}"?\n\nThis removes the search, findings, verdict, agent events, and all embeddings from Snowflake.`
+      )
+      if (!ok) return
+
+      setDeletingId(id)
+      setError(null)
+      try {
+        const res = await fetch(`/api/snowflake/search/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        })
+        const json = await res.json()
+        if (!res.ok) {
+          setError(json.error ?? `Delete failed (${res.status})`)
+          return
+        }
+        await load()
+      } catch (err) {
+        setError(String(err))
+      } finally {
+        setDeletingId(null)
+      }
+    },
+    [load]
+  )
 
   useEffect(() => {
     void load()
@@ -188,7 +227,11 @@ export default function SnowflakeDashboard() {
           </div>
 
           {data.semantic_enabled && data.semantic_memory && (
-            <SemanticMemoryGraph data={data.semantic_memory} />
+            <SemanticMemoryGraph
+              data={data.semantic_memory}
+              onDelete={deleteSwarm}
+              deletingId={deletingId}
+            />
           )}
 
           <section className="memory-section">
@@ -203,18 +246,19 @@ export default function SnowflakeDashboard() {
                     <th>findings</th>
                     <th>duration</th>
                     <th>completed</th>
+                    <th aria-label="actions" />
                   </tr>
                 </thead>
                 <tbody>
                   {data.recent_searches.length === 0 ? (
                     <tr>
-                      <td colSpan={data.semantic_enabled ? 6 : 5} className="memory-empty">
+                      <td colSpan={data.semantic_enabled ? 7 : 6} className="memory-empty">
                         No swarms yet — run a search on the home page.
                       </td>
                     </tr>
                   ) : (
                     data.recent_searches.map((row, i) => (
-                      <tr key={`${row.query_text}-${i}`}>
+                      <tr key={row.search_id?.trim() || `swarm-${i}-${row.query_text}`}>
                         <td className="memory-cell-query">{row.query_text}</td>
                         <td>
                           <span className={`memory-badge status-${row.status}`}>{row.status}</span>
@@ -231,6 +275,21 @@ export default function SnowflakeDashboard() {
                         <td>{row.finding_count ?? "—"}</td>
                         <td>{fmtMs(row.duration_ms)}</td>
                         <td className="memory-cell-dim">{fmtTime(row.completed_at)}</td>
+                        <td className="memory-cell-actions">
+                          <button
+                            type="button"
+                            className="memory-delete-btn"
+                            disabled={!row.search_id?.trim() || deletingId === row.search_id}
+                            onClick={() => void deleteSwarm(row.search_id, row.query_text)}
+                            title={
+                              row.search_id?.trim()
+                                ? "Delete swarm and all Snowflake data"
+                                : "search_id missing — restart backend and refresh"
+                            }
+                          >
+                            {deletingId === row.search_id ? "…" : "delete"}
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}

@@ -50,8 +50,6 @@ export default function Verdict({ verdict, findings = [] }: { verdict: VerdictTy
       </div>
 
       <div className="verdict-body">
-        <ConfidenceMeter score={score} />
-
         <p className="verdict-recommendation">{verdict.recommendation}</p>
 
         <div className="verdict-section-label">top picks</div>

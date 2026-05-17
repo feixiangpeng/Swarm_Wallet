@@ -10,7 +10,7 @@ const LANES: Array<{
   { id: "navigating", label: "navigating", statuses: ["navigating"] },
   { id: "searching", label: "searching", statuses: ["searching"] },
   { id: "extracting", label: "extracting", statuses: ["extracting"] },
-  { id: "done", label: "complete", statuses: ["done", "error", "launch_failed"] },
+  { id: "done", label: "complete", statuses: ["done", "error", "launch_failed", "blocked", "needs_verification"] },
 ]
 
 export default function AgentGrid({ agents }: { agents: AgentState[] }) {

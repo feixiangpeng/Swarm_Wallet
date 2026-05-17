@@ -35,6 +35,8 @@ export type AgentStatus =
   | "extracting"
   | "done"
   | "launch_failed"
+  | "blocked"
+  | "needs_verification"
   | "error"
 
 export interface AgentUpdate {
@@ -190,6 +192,30 @@ export async function runAgent(
     emit("navigating")
     await timed(`navigate ${plan.site}`, () => navigateFast(page, url))
     await waitForPage(page, 750)
+
+    const currentUrl = pageUrl(page) ?? ""
+    const pageTitle =
+      (await (page as { title?: () => Promise<string> }).title?.().catch(() => "")) ?? ""
+
+    const needsVerification =
+      /captcha|are you human|verify you.?re human|verify your age|age verification|confirm you.?re not a robot|i.?m not a robot|complete the security check/i.test(pageTitle)
+
+    const blocked =
+      !needsVerification &&
+      /access.?denied|unusual traffic|cloudflare|just a moment|robot check/i.test(pageTitle)
+
+    if (needsVerification) {
+      const screenshot = await captureScreenshot(page)
+      emit("needs_verification", { currentUrl, screenshot, error: `${plan.site} requires human verification` })
+      return null
+    }
+
+    if (blocked) {
+      const screenshot = await captureScreenshot(page)
+      emit("blocked", { currentUrl, screenshot, error: `${plan.site} blocked scraping` })
+      return null
+    }
+
     const firstScreenshot = await captureScreenshot(page)
     emit("searching", { currentUrl: pageUrl(page), screenshot: firstScreenshot })
 
