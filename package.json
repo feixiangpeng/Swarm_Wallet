@@ -1,0 +1,21 @@
+{
+  "name": "swarm-wallet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "smoke": "node --env-file=.env --import tsx smoke.ts",
+    "server": "node --env-file=.env --import tsx src/server.ts",
+    "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts"
+  },
+  "dependencies": {
+    "@browserbasehq/stagehand": "latest",
+    "openai": "latest",
+    "ws": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/ws": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
