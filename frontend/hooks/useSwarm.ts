@@ -35,6 +35,7 @@ function agentId(agent: AgentPlan) {
 export function useSwarm() {
   const [agents, setAgents]   = useState<AgentState[]>([])
   const [verdict, setVerdict] = useState<Verdict | null>(null)
+  const [findings, setFindings] = useState<Finding[]>([])
   const [status, setStatus]   = useState<SwarmStatus>("idle")
   const [activity, setActivity] = useState<SwarmActivity[]>([])
   const [query, setQuery] = useState("")
@@ -47,6 +48,7 @@ export function useSwarm() {
 
     setAgents([])
     setVerdict(null)
+    setFindings([])
     setActivity([])
     setQuery(query)
     setError(null)
@@ -112,6 +114,7 @@ export function useSwarm() {
 
       if (msg.type === "verdict") {
         setVerdict(msg.verdict as Verdict)
+        setFindings((msg.findings as Finding[]) ?? [])
         setStatus("done")
         runningRef.current = false
       }
@@ -145,5 +148,5 @@ export function useSwarm() {
     }
   }, [])
 
-  return { agents, verdict, status, activity, query, error, search }
+  return { agents, verdict, findings, status, activity, query, error, search }
 }

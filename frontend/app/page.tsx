@@ -5,6 +5,8 @@ import { useSwarm } from "@/hooks/useSwarm"
 import AgentGrid from "@/components/AgentGrid"
 import Verdict from "@/components/Verdict"
 import SwarmMap from "@/components/SwarmMap"
+import PriceSpread from "@/components/PriceSpread"
+import PriceTable from "@/components/PriceTable"
 
 const HINTS = [
   "Sony WH-1000XM5",
@@ -12,12 +14,16 @@ const HINTS = [
   "vintage Levi 501",
   "standing desk",
   "espresso machine under $400",
+  "sushi near me",
+  "best burger delivery",
+  "cheap Chinese food tonight",
 ]
+
 
 export default function Home() {
   const [input, setInput]     = useState("")
   const inputRef              = useRef<HTMLInputElement>(null)
-  const { agents, verdict, status, activity, query, error, search } = useSwarm()
+  const { agents, verdict, findings, status, activity, query, error, search } = useSwarm()
 
   const isActive = status !== "idle"
 
@@ -81,16 +87,17 @@ export default function Home() {
 
             <p className="hero-tagline">
               <span className="hero-tagline-line">
-                Type a product. Every relevant store gets searched <em>at once.</em>
+                Type anything — a product, a food craving, a purchase decision.
               </span>
               <span className="hero-tagline-line">
-                You get a single answer — best price, best timing, no tab hell.
+                Every relevant site gets searched <em>at once.</em> One answer back.
               </span>
             </p>
 
             {SearchForm}
 
             <div className="hero-hints">
+              <span className="hero-hints-label">try these →</span>
               {HINTS.map(h => (
                 <button key={h} className="hero-hint" onClick={() => handleHint(h)}>
                   {h}
@@ -115,10 +122,12 @@ export default function Home() {
               "rtings", "reddit", "slickdeals", "camelcamelcamel",
               "bhphotovideo", "microcenter", "adorama",
               "grailed", "depop", "poshmark", "therealreal",
+              "doordash", "uber eats", "grubhub", "yelp",
               "amazon", "newegg", "bestbuy", "ebay", "walmart",
               "rtings", "reddit", "slickdeals", "camelcamelcamel",
               "bhphotovideo", "microcenter", "adorama",
               "grailed", "depop", "poshmark", "therealreal",
+              "doordash", "uber eats", "grubhub", "yelp",
             ].map((s, i) => (
               <span key={i} className="ticker-item">{s}</span>
             ))}
@@ -145,6 +154,83 @@ export default function Home() {
           <div className="stat-item">
             <span className="stat-num">0</span>
             <span className="stat-label">tabs opened by you</span>
+          </div>
+        </div>
+
+        {/* ── BEFORE / AFTER ── */}
+        <div className="ba-section">
+          <div className="ba-inner">
+            <p className="how-eyebrow">the problem</p>
+            <h2 className="ba-title">Shopping online is broken.</h2>
+            <p className="ba-subtitle">
+              You already know the product you want. But finding the actual best deal
+              means opening a dozen tabs, manually comparing prices, reading review threads,
+              checking price history — and still not knowing if you got it right.
+            </p>
+            <div className="ba-grid">
+              <div className="ba-col ba-col-before">
+                <div className="ba-col-header">
+                  <span className="ba-col-badge before">before</span>
+                  <span className="ba-col-title">Manual search</span>
+                </div>
+                <div className="ba-rows">
+                  {[
+                    { metric: "Time spent",        value: "25–45 min", note: "per product research session" },
+                    { metric: "Tabs opened",        value: "1–8",       note: "or you just stay on Amazon and hope" },
+                    { metric: "Price coverage",     value: "2–3 sites", note: "most people stop at Amazon + Google" },
+                    { metric: "Price comparison",   value: "manual",    note: "switching tabs, copy-pasting prices" },
+                    { metric: "Deal confidence",    value: "low",       note: "no price history, no context" },
+                    { metric: "Review aggregation", value: "manual",    note: "copy-pasting across tabs" },
+                    { metric: "Missed savings",     value: "$20–80",    note: "avg. gap between first result and best price" },
+                  ].map(r => (
+                    <div key={r.metric} className="ba-row">
+                      <span className="ba-row-metric">{r.metric}</span>
+                      <span className="ba-row-value before">{r.value}</span>
+                      <span className="ba-row-note">{r.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="ba-col ba-col-after">
+                <div className="ba-col-header">
+                  <span className="ba-col-badge after">after</span>
+                  <span className="ba-col-title">Swarm Wallet</span>
+                </div>
+                <div className="ba-rows">
+                  {[
+                    { metric: "Time spent",        value: "< 60s",    note: "one query, parallel browser agents" },
+                    { metric: "Tabs opened",        value: "0",        note: "you never leave the page" },
+                    { metric: "Price coverage",     value: "12+ sites",note: "every relevant retailer at once" },
+                    { metric: "Price comparison",   value: "live",     note: "see exact prices across all sites side by side" },
+                    { metric: "Deal confidence",    value: "high",     note: "price history + timing advice included" },
+                    { metric: "Review aggregation", value: "automatic",note: "synthesized into one verdict" },
+                    { metric: "Missed savings",     value: "$0",       note: "best price surfaced in the final ranking" },
+                  ].map(r => (
+                    <div key={r.metric} className="ba-row">
+                      <span className="ba-row-metric">{r.metric}</span>
+                      <span className="ba-row-value after">{r.value}</span>
+                      <span className="ba-row-note">{r.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="ba-summary">
+              <div className="ba-summary-stat">
+                <span className="ba-summary-num">97%</span>
+                <span className="ba-summary-label">less time spent researching</span>
+              </div>
+              <div className="ba-summary-divider" />
+              <div className="ba-summary-stat">
+                <span className="ba-summary-num">6×</span>
+                <span className="ba-summary-label">more sites checked per search</span>
+              </div>
+              <div className="ba-summary-divider" />
+              <div className="ba-summary-stat">
+                <span className="ba-summary-num">1</span>
+                <span className="ba-summary-label">answer instead of 15 tabs</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -407,7 +493,9 @@ export default function Home() {
 
       <main className="main-content">
         <SwarmMap agents={agents} activity={activity} status={status} query={query || input} />
-        {verdict && <Verdict verdict={verdict} />}
+        <PriceSpread agents={agents} />
+        {verdict && <Verdict verdict={verdict} findings={findings} />}
+        {verdict && agents.length > 0 && <PriceTable agents={agents} />}
         {agents.length > 0 && <AgentGrid agents={agents} />}
       </main>
     </div>

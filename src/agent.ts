@@ -47,6 +47,7 @@ function searchUrl(site: string, query: string) {
     "bhphotovideo.com": `https://www.bhphotovideo.com/c/search?Ntt=${encoded}`,
     "adorama.com": `https://www.adorama.com/l/?searchinfo=${encoded}`,
     "ebay.com": `https://www.ebay.com/sch/i.html?_nkw=${encoded}`,
+    "etsy.com": `https://www.etsy.com/search?q=${encoded}`,
     "slickdeals.net": `https://slickdeals.net/newsearch.php?q=${encoded}`,
     "camelcamelcamel.com": `https://camelcamelcamel.com/search?sq=${encoded}`,
     "reddit.com": `https://www.reddit.com/search/?q=${encoded}`,

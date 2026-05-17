@@ -29,11 +29,6 @@ export function createBrowserbaseSession() {
       },
       proxies: [{ type: "browserbase", geolocation: { country: "US" } }],
     },
-    model: {
-      modelName: `openai/${modelName}`,
-      baseURL: "https://pass.wafer.ai/v1",
-      apiKey: process.env.WAFER_API_KEY!,
-    },
     llmClient: new CustomOpenAIClient({ modelName, client }),
     verbose: 0,
     disablePino: true,
