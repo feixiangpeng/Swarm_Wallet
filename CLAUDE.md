@@ -144,7 +144,7 @@ This takes 10–30s per session and is a Browserbase infrastructure cost — not
 - After each swarm: async writes to `SEARCHES`, `AGENT_EVENTS`, `FINDINGS`, `VERDICTS` (never blocks WS)
 - `planSwarm()` routes agents via Cortex semantic memory on similar past swarms when embeddings exist; else `SITE_RELIABILITY`, else default sites
 - `synthesize()` gets SQL-backed `warehouse_insights` on the verdict (shown in `Verdict.tsx`)
-- Setup: `npm run snowflake:migrate` · Dashboard: `http://localhost:3000/memory` · API: `GET :3001/snowflake/dashboard`
+- Setup: `npm run snowflake:migrate` · Dashboard: `http://localhost:3000/memory` (delete swarms → cascades rows + vectors) · API: `GET :3001/snowflake/dashboard` · `DELETE :3001/snowflake/search/:searchId`
 
 Do not commit real API keys. `.env.example` has placeholders only.
 
