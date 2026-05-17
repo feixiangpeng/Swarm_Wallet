@@ -4,11 +4,27 @@ import { runAgent, type AgentUpdate, type Finding } from "./agent"
 import { synthesize } from "./coordinator"
 import { getMaxBrowserSessions } from "./config"
 import type { AgentPlan } from "./planner"
+import {
+  buildIntelligenceContext,
+  emptyIntelligenceContext,
+  isSnowflakeEnabled,
+} from "./snowflake/index"
+import type { FindingRow } from "./snowflake/persist"
 
 export interface SwarmEvent {
   stage: "planning" | "spawning" | "running" | "synthesizing" | "complete"
   message: string
   agents?: AgentPlan[]
+}
+
+export interface SwarmSearchResult {
+  plan: Awaited<ReturnType<typeof planSwarm>>
+  findings: Finding[]
+  findingRows: FindingRow[]
+  verdict: Awaited<ReturnType<typeof synthesize>>
+  replayUrls: Record<string, string>
+  searchId: string
+  startedAt: number
 }
 
 async function runWithConcurrency<T, R>(
@@ -47,6 +63,7 @@ function throwIfAborted(signal?: AbortSignal) {
 
 export interface SwarmSearchOptions {
   allowedSites?: string[]
+  searchId?: string
 }
 
 export async function swarmSearch(
@@ -55,12 +72,18 @@ export async function swarmSearch(
   onEvent?: (event: SwarmEvent) => void,
   signal?: AbortSignal,
   options: SwarmSearchOptions = {},
-) {
+): Promise<SwarmSearchResult> {
   throwIfAborted(signal)
+  const searchId = options.searchId ?? crypto.randomUUID()
+  const startedAt = Date.now()
+
   onEvent?.({ stage: "planning", message: "mapping retailers and review sources" })
   const plan = await planSwarm(query, { allowedSites: options.allowedSites })
   throwIfAborted(signal)
   console.log(`${plan.agents.length} agents for "${plan.product}"`)
+  if (isSnowflakeEnabled()) {
+    console.log(`[snowflake] planner: ${plan.reasoning}`)
+  }
 
   const maxSessions = getMaxBrowserSessions()
   onEvent?.({
@@ -71,6 +94,8 @@ export async function swarmSearch(
 
   onEvent?.({ stage: "running", message: "agents are searching in parallel" })
   const replayUrls: Record<string, string> = {}
+  const findingRows: FindingRow[] = []
+
   const results = await runWithConcurrency(
     plan.agents,
     Math.max(1, maxSessions),
@@ -88,7 +113,17 @@ export async function swarmSearch(
         const liveAgent = await spawnAgent(agentPlan)
         if (signal?.aborted) return null
         replayUrls[id] = liveAgent.replayUrl
-        return runAgent(liveAgent, query, onUpdate)
+        const finding = await runAgent(liveAgent, query, onUpdate)
+        if (finding) {
+          findingRows.push({
+            finding,
+            agentId: id,
+            site: agentPlan.site,
+            role: agentPlan.role,
+            replayUrl: liveAgent.replayUrl,
+          })
+        }
+        return finding
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.error(`Failed to launch ${agentPlan.site}:`, err)
@@ -112,9 +147,28 @@ export async function swarmSearch(
   }
 
   onEvent?.({ stage: "synthesizing", message: "ranking findings into a verdict" })
-  const verdict = await synthesize(query, findings)
+
+  const intelligence = isSnowflakeEnabled()
+    ? await buildIntelligenceContext(query, findings)
+    : emptyIntelligenceContext()
+
+  if (intelligence.insights.outliers.length > 0) {
+    console.log(
+      `[snowflake] ${intelligence.insights.outliers.length} outlier(s) flagged`
+    )
+  }
+
+  const verdict = await synthesize(query, findings, intelligence)
   throwIfAborted(signal)
 
   onEvent?.({ stage: "complete", message: "purchase intelligence ready" })
-  return { plan, findings, verdict, replayUrls }
+  return {
+    plan,
+    findings,
+    findingRows,
+    verdict,
+    replayUrls,
+    searchId,
+    startedAt,
+  }
 }

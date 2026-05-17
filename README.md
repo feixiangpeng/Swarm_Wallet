@@ -85,6 +85,28 @@ npm run dev          # Next.js on :3000
 
 Set `NEXT_PUBLIC_WS_URL=ws://localhost:3001` in `frontend/.env.local` for local dev.
 
+### Snowflake (swarm memory)
+
+Snowflake stores every swarm run and powers:
+
+- **90-day price history** → grounded “buy now or wait” timing in the verdict
+- **Outlier detection** → flags suspiciously cheap listings vs history
+- **Site reliability** → re-ranks which agents to deploy first
+- **Collective intelligence** → “best historical site” hints across prior swarms
+- **Memory dashboard** → Next.js page at `/memory` (live warehouse stats)
+
+```bash
+# Add SNOWFLAKE_* vars to .env (see .env.example)
+npm run snowflake:migrate   # creates tables, views, dynamic table
+
+npm run server              # logs [snowflake] enabled when configured
+cd frontend && npm run dev  # open http://localhost:3000/memory
+```
+
+API: `GET http://localhost:3001/snowflake/dashboard` (proxied via `frontend/app/api/snowflake/dashboard`)
+
+Without Snowflake credentials the app runs normally; persistence and warehouse insights are skipped.
+
 ---
 
 ## Build order

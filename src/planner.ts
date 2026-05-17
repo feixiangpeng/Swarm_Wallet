@@ -1,3 +1,5 @@
+import { getPlannerSiteBoost, isSnowflakeEnabled } from "./snowflake/index"
+
 export interface AgentPlan {
   site: string
   role: "price" | "reviews" | "deals"
@@ -53,15 +55,26 @@ export async function planSwarm(
   const allowed = options.allowedSites && options.allowedSites.length > 0
     ? new Set(options.allowedSites)
     : null
-  const agents = allowed
+  let agents = allowed
     ? POPULAR_SITES.filter(a => allowed.has(a.site))
     : POPULAR_SITES
+  let reasoning = allowed
+    ? `filtered to ${agents.length} sites selected by the user`
+    : "default popular retail sites"
+
+  // Snowflake boost re-ranks within whatever set the user allowed.
+  if (isSnowflakeEnabled()) {
+    const boosted = await getPlannerSiteBoost(query, agents)
+    agents = boosted.agents
+    reasoning = allowed
+      ? `${reasoning}; ${boosted.reasoning}`
+      : boosted.reasoning
+  }
+
   return {
     product: query,
     category: "general",
     agents,
-    reasoning: allowed
-      ? `filtered to ${agents.length} sites selected by the user`
-      : "hardcoded popular retail, deals, and review sites",
+    reasoning,
   }
 }

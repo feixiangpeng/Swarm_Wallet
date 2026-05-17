@@ -132,6 +132,19 @@ This takes 10–30s per session and is a Browserbase infrastructure cost — not
 | `PREWARM_BROWSERBASE_SESSIONS` | `MAX_BROWSER_SESSIONS` | Pool size |
 | `WARM_BROWSERBASE_WAIT_MS` | `30000` | Max wait for a warm session before cold-create fallback |
 | `NEXT_PUBLIC_WS_URL` | `ws://localhost:3001` | Frontend WebSocket URL |
+| `SNOWFLAKE_ENABLED` | auto | Set `false` to disable; needs account + user + password/key |
+| `SNOWFLAKE_ACCOUNT` | — | Account locator (e.g. `xy12345.us-east-1`) |
+| `SNOWFLAKE_USER` / `SNOWFLAKE_PASSWORD` | — | Writer creds (or `SNOWFLAKE_PRIVATE_KEY` for JWT) |
+| `SNOWFLAKE_WAREHOUSE` | `COMPUTE_WH` | Warehouse for queries |
+| `SNOWFLAKE_DATABASE` / `SNOWFLAKE_SCHEMA` | `SWARM_WALLET` / `APP` | Object namespace |
+
+### Snowflake (swarm memory)
+
+- `src/snowflake/` — client, persist, intelligence (price history, outliers, site reliability)
+- After each swarm: async writes to `SEARCHES`, `AGENT_EVENTS`, `FINDINGS`, `VERDICTS` (never blocks WS)
+- `planSwarm()` re-orders agents by `SITE_RELIABILITY` view when enabled
+- `synthesize()` gets SQL-backed `warehouse_insights` on the verdict (shown in `Verdict.tsx`)
+- Setup: `npm run snowflake:migrate` · Dashboard: `http://localhost:3000/memory` · API: `GET :3001/snowflake/dashboard`
 
 Do not commit real API keys. `.env.example` has placeholders only.
 
