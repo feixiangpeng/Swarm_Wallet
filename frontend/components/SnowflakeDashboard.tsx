@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
+import SemanticMemoryGraph from "./SemanticMemoryGraph"
 
 export interface DashboardData {
   summary: {
@@ -11,12 +12,28 @@ export interface DashboardData {
     searches_embedded: number
   }
   semantic_enabled: boolean
+  semantic_memory: {
+    model: string
+    similarity_threshold: number
+    findings_embedded: number
+    embedded_queries: Array<{
+      query_text: string
+      finding_count: number | null
+      completed_at: string | null
+    }>
+    similar_pairs: Array<{
+      query_a: string
+      query_b: string
+      similarity: number
+    }>
+  } | null
   recent_searches: Array<{
     query_text: string
     status: string
     finding_count: number | null
     duration_ms: number | null
     completed_at: string | null
+    has_embedding: boolean
   }>
   site_reliability: Array<{
     site: string
@@ -120,7 +137,10 @@ export default function SnowflakeDashboard() {
             swarm<span>.</span>memory
           </h1>
           <p className="memory-subtitle">
-            Snowflake warehouse — price history, site reliability, collective intelligence
+            Snowflake warehouse — price history, site reliability, collective intelligence ·{" "}
+            <Link href="/architecture" className="memory-inline-link">
+              system architecture →
+            </Link>
           </p>
         </div>
         <button type="button" className="memory-refresh" onClick={() => void load()} disabled={loading}>
@@ -167,6 +187,10 @@ export default function SnowflakeDashboard() {
             )}
           </div>
 
+          {data.semantic_enabled && data.semantic_memory && (
+            <SemanticMemoryGraph data={data.semantic_memory} />
+          )}
+
           <section className="memory-section">
             <h2 className="memory-section-title">Recent swarms</h2>
             <div className="memory-table-wrap">
@@ -175,6 +199,7 @@ export default function SnowflakeDashboard() {
                   <tr>
                     <th>query</th>
                     <th>status</th>
+                    {data.semantic_enabled && <th>vector</th>}
                     <th>findings</th>
                     <th>duration</th>
                     <th>completed</th>
@@ -183,7 +208,7 @@ export default function SnowflakeDashboard() {
                 <tbody>
                   {data.recent_searches.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="memory-empty">
+                      <td colSpan={data.semantic_enabled ? 6 : 5} className="memory-empty">
                         No swarms yet — run a search on the home page.
                       </td>
                     </tr>
@@ -194,6 +219,15 @@ export default function SnowflakeDashboard() {
                         <td>
                           <span className={`memory-badge status-${row.status}`}>{row.status}</span>
                         </td>
+                        {data.semantic_enabled && (
+                          <td>
+                            {row.has_embedding ? (
+                              <span className="memory-badge memory-badge-vector">768d</span>
+                            ) : (
+                              <span className="memory-cell-dim">—</span>
+                            )}
+                          </td>
+                        )}
                         <td>{row.finding_count ?? "—"}</td>
                         <td>{fmtMs(row.duration_ms)}</td>
                         <td className="memory-cell-dim">{fmtTime(row.completed_at)}</td>

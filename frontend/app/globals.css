@@ -4223,3 +4223,579 @@ body::after {
   color: var(--blue);
   text-align: right;
 }
+
+/* ── Semantic vector memory (/memory) ── */
+.memory-semantic-head {
+  margin-bottom: 1rem;
+}
+
+.memory-semantic-desc {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  max-width: 52rem;
+}
+
+.memory-semantic-desc code {
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.memory-semantic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.memory-semantic-pill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 99px;
+  color: var(--blue);
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.memory-semantic-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .memory-semantic-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.memory-semantic-graph-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+}
+
+.memory-semantic-graph {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.memory-semantic-edge {
+  stroke: var(--blue);
+}
+
+.memory-semantic-node-dot {
+  fill: var(--bg-elevated);
+  stroke: var(--blue);
+  stroke-width: 2;
+}
+
+.memory-semantic-legend {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.memory-semantic-links {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+}
+
+.memory-semantic-links-title {
+  margin: 0 0 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.memory-semantic-pair-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.memory-semantic-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 36px minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 10px;
+}
+
+.memory-semantic-pair-a,
+.memory-semantic-pair-b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.memory-semantic-pair-b {
+  text-align: right;
+}
+
+.memory-semantic-pair-bar-wrap {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.memory-semantic-pair-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  border-radius: inherit;
+}
+
+.memory-semantic-pair-pct {
+  font-weight: 700;
+  color: var(--green);
+  text-align: center;
+}
+
+.memory-badge-vector {
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.12);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.memory-inline-link {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.memory-inline-link:hover {
+  color: var(--green);
+  text-decoration: underline;
+}
+
+/* ─── Architecture page (/architecture) ─── */
+
+.arch-root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.arch-header {
+  margin-bottom: 2.5rem;
+}
+
+.arch-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
+  margin: 0.5rem 0;
+}
+
+.arch-title span {
+  color: var(--green);
+}
+
+.arch-subtitle {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 36rem;
+  margin-bottom: 1rem;
+}
+
+.arch-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.arch-nav-link {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.arch-nav-link:hover {
+  color: var(--green);
+}
+
+.arch-section {
+  margin-bottom: 2.75rem;
+}
+
+.arch-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  margin: 0 0 1.25rem;
+}
+
+.arch-section-lead {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin: -0.5rem 0 1.25rem;
+}
+
+.arch-section-lead code {
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.arch-system {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.25rem;
+}
+
+.arch-system-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.arch-system-row-top {
+  margin-bottom: 0.25rem;
+}
+
+.arch-system-row-three {
+  gap: 0.75rem;
+}
+
+.arch-system-h {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.arch-system-connector-down {
+  width: 2px;
+  height: 20px;
+  margin: 0.35rem auto;
+  background: linear-gradient(180deg, var(--border), var(--blue));
+}
+
+.arch-system-connector-fan {
+  display: flex;
+  justify-content: center;
+  gap: 28%;
+  height: 18px;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.arch-system-connector-fan span {
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--blue), var(--border));
+}
+
+.arch-node {
+  flex: 1;
+  min-width: 100px;
+  max-width: 160px;
+  padding: 0.75rem 0.65rem;
+  text-align: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.arch-node-user {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.arch-node-fe {
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.arch-node-be {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.08);
+}
+
+.arch-node-wafer {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+.arch-node-snow {
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.06);
+}
+
+.arch-node-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+
+.arch-node-desc {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.arch-flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arch-flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.arch-flow-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.25rem;
+}
+
+.arch-flow-phase {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 0.35rem;
+}
+
+.arch-flow-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+}
+
+.arch-flow-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+  margin: 0 0 0.75rem;
+}
+
+.arch-flow-tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.arch-flow-tags li {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  color: var(--blue);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.arch-flow-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0 0.5rem;
+}
+
+.arch-flow-arrow-line {
+  width: 2px;
+  height: 12px;
+  background: var(--border);
+}
+
+.arch-flow-arrow-head {
+  font-size: 12px;
+  color: var(--green);
+  line-height: 1;
+}
+
+.arch-memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.arch-memory-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.arch-memory-card-write {
+  border-color: rgba(34, 197, 94, 0.35);
+  grid-column: 1 / -1;
+}
+
+.arch-memory-when {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.arch-memory-what {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0.35rem 0 0.5rem;
+}
+
+.arch-memory-path {
+  display: block;
+  font-size: 10px;
+  color: var(--text-dim);
+  word-break: break-word;
+}
+
+.arch-semantic-loop {
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.arch-semantic-loop-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 0.35rem;
+}
+
+.arch-semantic-loop p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.arch-semantic-loop a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.arch-semantic-loop a:hover {
+  color: var(--green);
+}
+
+.arch-bullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+
+.arch-bullets li {
+  margin-bottom: 0.5rem;
+}
+
+.arch-bullets strong {
+  color: var(--text);
+}
+
+.arch-bullets code {
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.arch-stack {
+  margin: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.arch-stack-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.arch-stack-row:last-child {
+  border-bottom: none;
+}
+
+.arch-stack-row dt {
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.arch-stack-row dd {
+  margin: 0;
+  color: var(--text-dim);
+}
+
+.arch-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.arch-footer a {
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.arch-footer a:hover {
+  color: var(--green);
+}

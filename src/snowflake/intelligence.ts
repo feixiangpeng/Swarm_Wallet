@@ -5,6 +5,7 @@ import { isSnowflakeEnabled } from "./config"
 import { productKey, siteFromSource } from "./normalize"
 import {
   findSimilarSearches,
+  findSitesFromSimilarSearches,
   isSemanticSearchEnabled,
   loadSemanticPriceHistory,
 } from "./semantic"
@@ -69,18 +70,10 @@ export async function getSiteReliability(): Promise<SiteReliabilityRow[]> {
   }
 }
 
-export async function getPlannerSiteBoost(
-  query: string,
-  baseAgents: AgentPlan[]
-): Promise<{ agents: AgentPlan[]; reasoning: string }> {
-  const reliability = await getSiteReliability()
-  if (reliability.length === 0) {
-    return {
-      agents: baseAgents,
-      reasoning: "default site list (no Snowflake history yet)",
-    }
-  }
-
+function rankAgentsByReliability(
+  baseAgents: AgentPlan[],
+  reliability: SiteReliabilityRow[]
+): { agents: AgentPlan[]; reasoning: string } {
   const scoreMap = new Map(
     reliability.map((r) => [`${r.site}::${r.role}`, r.success_rate])
   )
@@ -96,6 +89,60 @@ export async function getPlannerSiteBoost(
     agents: sorted,
     reasoning: `Snowflake ranked agents by 30-day success rate (top: ${top.site} ${Math.round(top.success_rate * 100)}%)`,
   }
+}
+
+export async function getPlannerSiteBoost(
+  query: string,
+  baseAgents: AgentPlan[]
+): Promise<{ agents: AgentPlan[]; reasoning: string }> {
+  const baseSites = baseAgents.map((a) => a.site)
+
+  if (isSemanticSearchEnabled()) {
+    const siteScores = await findSitesFromSimilarSearches(query, baseSites)
+
+    if (siteScores.length >= 2) {
+      const scoreMap = new Map(siteScores.map((s) => [s.site, s.score]))
+      const agents = [...baseAgents]
+        .filter((a) => scoreMap.has(a.site))
+        .sort((a, b) => (scoreMap.get(b.site) ?? 0) - (scoreMap.get(a.site) ?? 0))
+
+      const labels = siteScores
+        .slice(0, 4)
+        .map((s) => `${s.site} (${s.priced_findings} priced)`)
+        .join(", ")
+
+      return {
+        agents,
+        reasoning: `Semantic memory routed swarm to ${agents.length} sites from similar past searches: ${labels}`,
+      }
+    }
+
+    if (siteScores.length === 1) {
+      const topSite = siteScores[0].site
+      const scoreMap = new Map(siteScores.map((s) => [s.site, s.score]))
+      const agents = [...baseAgents].sort((a, b) => {
+        const sa = a.site === topSite ? scoreMap.get(topSite)! + 1 : 0
+        const sb = b.site === topSite ? scoreMap.get(topSite)! + 1 : 0
+        return sb - sa
+      })
+      return {
+        agents,
+        reasoning: `Semantic memory prioritized ${topSite} from a similar past swarm; kept other allowed sites as backup`,
+      }
+    }
+  }
+
+  const reliability = await getSiteReliability()
+  if (reliability.length === 0) {
+    return {
+      agents: baseAgents,
+      reasoning: isSemanticSearchEnabled()
+        ? "default sites (no similar swarms in memory yet)"
+        : "default site list (no Snowflake history yet)",
+    }
+  }
+
+  return rankAgentsByReliability(baseAgents, reliability)
 }
 
 export async function detectOutliers(

@@ -1,5 +1,9 @@
 import { execute } from "./client"
-import { isSemanticSearchEnabled } from "./semantic"
+import {
+  embedModel,
+  isSemanticSearchEnabled,
+  similarityThreshold,
+} from "./semantic"
 
 export interface SnowflakeDashboard {
   summary: {
@@ -9,12 +13,14 @@ export interface SnowflakeDashboard {
     searches_embedded: number
   }
   semantic_enabled: boolean
+  semantic_memory: SemanticMemoryViz | null
   recent_searches: Array<{
     query_text: string
     status: string
     finding_count: number | null
     duration_ms: number | null
     completed_at: string | null
+    has_embedding: boolean
   }>
   site_reliability: Array<{
     site: string
@@ -55,8 +61,90 @@ function str(v: unknown): string {
   return v == null ? "" : String(v)
 }
 
+export interface SemanticMemoryViz {
+  model: string
+  similarity_threshold: number
+  findings_embedded: number
+  embedded_queries: Array<{
+    query_text: string
+    finding_count: number | null
+    completed_at: string | null
+  }>
+  similar_pairs: Array<{
+    query_a: string
+    query_b: string
+    similarity: number
+  }>
+}
+
+async function fetchSemanticMemoryViz(): Promise<SemanticMemoryViz | null> {
+  if (!isSemanticSearchEnabled()) return null
+
+  const threshold = similarityThreshold()
+
+  try {
+    const [findingsEmbeddedRows, embeddedRows, pairRows] = await Promise.all([
+      execute<{ N: number }>(
+        `SELECT COUNT(*) AS N FROM FINDINGS WHERE FINDING_EMBEDDING IS NOT NULL`
+      ),
+      execute<{
+        QUERY_TEXT: string
+        FINDING_COUNT: number
+        COMPLETED_AT: string
+      }>(
+        `SELECT QUERY_TEXT, FINDING_COUNT, COMPLETED_AT
+         FROM SEARCHES
+         WHERE QUERY_EMBEDDING IS NOT NULL AND STATUS = 'complete'
+         ORDER BY COMPLETED_AT DESC NULLS LAST
+         LIMIT 16`
+      ),
+      execute<{
+        QUERY_A: string
+        QUERY_B: string
+        SIMILARITY: number
+      }>(
+        `WITH embedded AS (
+           SELECT SEARCH_ID, QUERY_TEXT, QUERY_EMBEDDING
+           FROM SEARCHES
+           WHERE QUERY_EMBEDDING IS NOT NULL AND STATUS = 'complete'
+           ORDER BY COMPLETED_AT DESC NULLS LAST
+           LIMIT 12
+         )
+         SELECT
+           a.QUERY_TEXT AS QUERY_A,
+           b.QUERY_TEXT AS QUERY_B,
+           VECTOR_COSINE_SIMILARITY(a.QUERY_EMBEDDING, b.QUERY_EMBEDDING) AS SIMILARITY
+         FROM embedded a
+         INNER JOIN embedded b ON a.SEARCH_ID < b.SEARCH_ID
+         WHERE VECTOR_COSINE_SIMILARITY(a.QUERY_EMBEDDING, b.QUERY_EMBEDDING) >= ${threshold}
+         ORDER BY SIMILARITY DESC
+         LIMIT 32`
+      ),
+    ])
+
+    return {
+      model: embedModel(),
+      similarity_threshold: threshold,
+      findings_embedded: num(findingsEmbeddedRows[0]?.N),
+      embedded_queries: embeddedRows.map((r) => ({
+        query_text: str(r.QUERY_TEXT),
+        finding_count: r.FINDING_COUNT != null ? num(r.FINDING_COUNT) : null,
+        completed_at: r.COMPLETED_AT != null ? str(r.COMPLETED_AT) : null,
+      })),
+      similar_pairs: pairRows.map((r) => ({
+        query_a: str(r.QUERY_A),
+        query_b: str(r.QUERY_B),
+        similarity: Number(r.SIMILARITY),
+      })),
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
-  const [summaryRows, recent, reliability, history, outliers] = await Promise.all([
+  const [summaryRows, recent, reliability, history, outliers, semantic_memory] =
+    await Promise.all([
     execute<{
       SEARCHES: number
       PRICED_FINDINGS: number
@@ -75,8 +163,10 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
       FINDING_COUNT: number
       DURATION_MS: number
       COMPLETED_AT: string
+      HAS_EMBEDDING: boolean
     }>(
-      `SELECT QUERY_TEXT, STATUS, FINDING_COUNT, DURATION_MS, COMPLETED_AT
+      `SELECT QUERY_TEXT, STATUS, FINDING_COUNT, DURATION_MS, COMPLETED_AT,
+        (QUERY_EMBEDDING IS NOT NULL) AS HAS_EMBEDDING
        FROM SEARCHES
        ORDER BY COMPLETED_AT DESC NULLS LAST
        LIMIT 12`
@@ -118,6 +208,7 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
        ORDER BY RECORDED_AT DESC
        LIMIT 15`
     ),
+    fetchSemanticMemoryViz(),
   ])
 
   let daily: SnowflakeDashboard["daily_prices"] = []
@@ -157,12 +248,14 @@ export async function fetchSnowflakeDashboard(): Promise<SnowflakeDashboard> {
       searches_embedded: num(s?.SEARCHES_EMBEDDED),
     },
     semantic_enabled: isSemanticSearchEnabled(),
+    semantic_memory,
     recent_searches: recent.map((r) => ({
       query_text: str(r.QUERY_TEXT),
       status: str(r.STATUS),
       finding_count: r.FINDING_COUNT != null ? num(r.FINDING_COUNT) : null,
       duration_ms: r.DURATION_MS != null ? num(r.DURATION_MS) : null,
       completed_at: r.COMPLETED_AT != null ? str(r.COMPLETED_AT) : null,
+      has_embedding: Boolean(r.HAS_EMBEDDING),
     })),
     site_reliability: reliability.map((r) => ({
       site: str(r.SITE),

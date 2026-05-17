@@ -57,6 +57,81 @@ export interface SimilarSearch {
   finding_count: number | null
 }
 
+export interface SemanticSiteScore {
+  site: string
+  /** Sum of cosine similarity from matching swarms (higher = stronger memory). */
+  score: number
+  priced_findings: number
+  avg_price: number | null
+  min_price: number | null
+}
+
+/** Sites that priced well on semantically similar past swarms — used for planner routing. */
+export async function findSitesFromSimilarSearches(
+  query: string,
+  siteFilter?: string[]
+): Promise<SemanticSiteScore[]> {
+  if (!isSemanticSearchEnabled()) return []
+
+  try {
+    const embed = embedExpr("?")
+    const threshold = similarityThreshold()
+    const binds: (string | number)[] = [query, query]
+
+    let siteClause = ""
+    if (siteFilter && siteFilter.length > 0) {
+      siteClause = ` AND f.SITE IN (${siteFilter.map(() => "?").join(", ")})`
+      binds.push(...siteFilter)
+    }
+
+    const rows = await execute<{
+      SITE: string
+      SCORE: number
+      PRICED_FINDINGS: number
+      AVG_PRICE: number
+      MIN_PRICE: number
+    }>(
+      `WITH scored AS (
+         SELECT SEARCH_ID,
+           VECTOR_COSINE_SIMILARITY(QUERY_EMBEDDING, ${embed}) AS SIM
+         FROM SEARCHES
+         WHERE STATUS = 'complete'
+           AND QUERY_EMBEDDING IS NOT NULL
+           AND LOWER(TRIM(QUERY_TEXT)) != LOWER(TRIM(?))
+       ),
+       similar AS (
+         SELECT SEARCH_ID, SIM FROM scored
+         WHERE SIM >= ${threshold}
+         ORDER BY SIM DESC
+         LIMIT 8
+       )
+       SELECT
+         f.SITE,
+         SUM(s.SIM) AS SCORE,
+         COUNT(*) AS PRICED_FINDINGS,
+         AVG(f.PRICE) AS AVG_PRICE,
+         MIN(f.PRICE) AS MIN_PRICE
+       FROM FINDINGS f
+       INNER JOIN similar s ON f.SEARCH_ID = s.SEARCH_ID
+       WHERE f.PRICE IS NOT NULL${siteClause}
+       GROUP BY f.SITE
+       ORDER BY SCORE DESC, PRICED_FINDINGS DESC`,
+      binds
+    )
+
+    return rows.map((r) => ({
+      site: String(r.SITE),
+      score: Number(r.SCORE),
+      priced_findings: Number(r.PRICED_FINDINGS),
+      avg_price: r.AVG_PRICE != null ? Number(r.AVG_PRICE) : null,
+      min_price: r.MIN_PRICE != null ? Number(r.MIN_PRICE) : null,
+    }))
+  } catch (err) {
+    console.warn("[snowflake] findSitesFromSimilarSearches:", err)
+    return []
+  }
+}
+
 export async function findSimilarSearches(
   query: string,
   limit = 5

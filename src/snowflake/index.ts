@@ -18,9 +18,11 @@ export {
 export {
   embedCompletedSearch,
   findSimilarSearches,
+  findSitesFromSimilarSearches,
   isSemanticSearchEnabled,
   loadSemanticPriceHistory,
 } from "./semantic"
+export type { SemanticSiteScore, SimilarSearch } from "./semantic"
 export { fetchSnowflakeDashboard } from "./dashboard"
 export type { SnowflakeDashboard } from "./dashboard"
 export { productKey } from "./normalize"

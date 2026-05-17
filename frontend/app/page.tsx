@@ -516,6 +516,9 @@ export default function Home() {
           <span className="footer-wordmark">swarm<span>.</span>wallet</span>
           <span className="footer-sep">·</span>
           <span className="footer-tagline">parallel browser agents for purchase intelligence</span>
+          <Link className="footer-github" href="/architecture">
+            architecture →
+          </Link>
           <Link className="footer-github" href="/memory">
             snowflake memory →
           </Link>

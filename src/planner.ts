@@ -62,7 +62,7 @@ export async function planSwarm(
     ? `filtered to ${agents.length} sites selected by the user`
     : "default popular retail sites"
 
-  // Snowflake boost re-ranks within whatever set the user allowed.
+  // Snowflake: semantic site routing when memory exists, else reliability re-rank.
   if (isSnowflakeEnabled()) {
     const boosted = await getPlannerSiteBoost(query, agents)
     agents = boosted.agents
