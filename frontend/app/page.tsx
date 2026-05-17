@@ -44,7 +44,7 @@ export default function Home() {
     const topFinding = live.findings.find(f => f.price != null) ?? live.findings[0]
     history.save({
       query: live.query,
-      topPick: topFinding?.site,
+      topPick: topFinding?.source,
       topPrice: topFinding?.price,
       agents: live.agents,
       result: {
