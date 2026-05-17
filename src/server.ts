@@ -2,6 +2,7 @@ import { createServer } from "http"
 import { WebSocketServer } from "ws"
 import { swarmSearch } from "./main"
 import { startSessionPrewarm, stopSessionPrewarm } from "./sessionPool"
+import { getMaxBrowserSessions, getPrewarmBrowserSessions, getWarmBrowserbaseWaitMs } from "./config"
 
 const server = createServer()
 const wss = new WebSocketServer({ server })
@@ -24,7 +25,14 @@ wss.on("connection", (ws) => {
   })
 })
 
-server.listen(3001, () => console.log("WS server ready on :3001"))
+server.listen(3001, () => {
+  console.log("WS server ready on :3001")
+  console.log(
+    `[config] MAX_BROWSER_SESSIONS=${getMaxBrowserSessions()} ` +
+    `PREWARM_BROWSERBASE_SESSIONS=${getPrewarmBrowserSessions()} ` +
+    `WARM_BROWSERBASE_WAIT_MS=${getWarmBrowserbaseWaitMs()}`
+  )
+})
 
 async function shutdown() {
   await stopSessionPrewarm()

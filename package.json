@@ -4,9 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "check:browserbase": "node --env-file=.env --import tsx src/check-browserbase.ts",
     "smoke": "node --env-file=.env --import tsx smoke.ts",
     "setup:context": "node --env-file=.env --import tsx src/setup-context.ts",
     "server": "node --env-file=.env --import tsx src/server.ts",
+    "server:4": "MAX_BROWSER_SESSIONS=4 PREWARM_BROWSERBASE_SESSIONS=4 node --env-file=.env --import tsx src/server.ts",
     "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts"
   },
   "dependencies": {

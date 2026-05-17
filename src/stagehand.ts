@@ -6,6 +6,7 @@ export type { V3 }
 export function createBrowserbaseSession() {
   const modelName = "qwen3.6-max-preview"
   const contextId = process.env.BROWSERBASE_CONTEXT_ID
+  const projectId = process.env.BROWSERBASE_PROJECT_ID?.trim()
   const client = new OpenAI({
     baseURL: "https://pass.wafer.ai/v1",
     apiKey: process.env.WAFER_API_KEY!,
@@ -14,7 +15,7 @@ export function createBrowserbaseSession() {
   return new V3({
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY!,
-    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    ...(projectId ? { projectId } : {}),
     browserbaseSessionCreateParams: {
       browserSettings: {
         ...(contextId ? { context: { id: contextId, persist: true } } : {}),

@@ -2,6 +2,7 @@ import { planSwarm } from "./planner"
 import { agentId, spawnAgent } from "./spawner"
 import { runAgent, type AgentUpdate, type Finding } from "./agent"
 import { synthesize } from "./coordinator"
+import { getMaxBrowserSessions } from "./config"
 import type { AgentPlan } from "./planner"
 
 export interface SwarmEvent {
@@ -43,7 +44,7 @@ export async function swarmSearch(
   const plan = await planSwarm(query)
   console.log(`${plan.agents.length} agents for "${plan.product}"`)
 
-  const maxSessions = Number(process.env.MAX_BROWSER_SESSIONS ?? 4)
+  const maxSessions = getMaxBrowserSessions()
   onEvent?.({
     stage: "spawning",
     message: `queueing ${plan.agents.length} agents, ${Math.min(plan.agents.length, maxSessions)} at a time`,
