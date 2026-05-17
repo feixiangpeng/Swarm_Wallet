@@ -22,6 +22,7 @@ export type AgentStatus =
   | "extracting"
   | "done"
   | "launch_failed"
+  | "blocked"
   | "error"
 
 export interface AgentUpdate {
@@ -92,8 +93,23 @@ export async function runAgent(
 
     // Navigate — no LLM, no semaphore, runs freely
     emit("navigating")
-    await page.goto(searchUrl(plan.site, query), { waitUntil: "domcontentloaded", timeoutMs: 45000 })
-    emit("navigating", { currentUrl: pageUrl(page), screenshot: await captureScreenshot(page) })
+    const response = await page.goto(searchUrl(plan.site, query), { waitUntil: "domcontentloaded", timeoutMs: 45000 })
+
+    // Detect hard blocks: HTTP 403/429/503 or bot-detection pages
+    const httpStatus = (response as { status?: () => number } | null)?.status?.()
+    const currentUrl = pageUrl(page) ?? ""
+    const pageTitle  = await (page as { title?: () => Promise<string> }).title?.().catch(() => "") ?? ""
+    const blocked =
+      httpStatus === 403 || httpStatus === 429 || httpStatus === 503 ||
+      /access.?denied|robot|captcha|are you human|unusual traffic|cloudflare|just a moment/i.test(pageTitle)
+
+    if (blocked) {
+      const screenshot = await captureScreenshot(page)
+      emit("blocked", { currentUrl, screenshot, error: `${plan.site} blocked scraping` })
+      return null
+    }
+
+    emit("navigating", { currentUrl, screenshot: await captureScreenshot(page) })
 
     // Act — LLM calls, queued through semaphore
     emit("searching", { currentUrl: pageUrl(page), screenshot: await captureScreenshot(page) })
