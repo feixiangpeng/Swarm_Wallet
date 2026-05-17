@@ -9,12 +9,15 @@
     "setup:context": "node --env-file=.env --import tsx src/setup-context.ts",
     "server": "node --env-file=.env --import tsx src/server.ts",
     "server:4": "MAX_BROWSER_SESSIONS=4 PREWARM_BROWSERBASE_SESSIONS=4 node --env-file=.env --import tsx src/server.ts",
-    "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts"
+    "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts",
+    "snowflake:migrate": "node --env-file=.env --import tsx src/snowflake/run-migrate.ts",
+    "snowflake:backfill-embeddings": "node --env-file=.env --import tsx src/snowflake/backfill-embeddings.ts"
   },
   "dependencies": {
     "@browserbasehq/sdk": "latest",
     "@browserbasehq/stagehand": "latest",
     "openai": "4.104.0",
+    "snowflake-sdk": "^2.4.1",
     "ws": "latest",
     "zod": "3.25.76"
   },

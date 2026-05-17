@@ -4,7 +4,6 @@ import type { Finding } from "../../src/agent"
 function confidenceScore(findings: Finding[]): number {
   if (findings.length === 0) return 0
   const avg = findings.reduce((sum, f) => sum + (f.confidence ?? 0.5), 0) / findings.length
-  // boost for coverage: more agents = more confidence
   const coverage = Math.min(findings.length / 6, 1)
   return Math.round((avg * 0.7 + coverage * 0.3) * 100)
 }
@@ -41,6 +40,7 @@ function ConfidenceMeter({ score }: { score: number }) {
 export default function Verdict({ verdict, findings = [] }: { verdict: VerdictType; findings?: Finding[] }) {
   const time  = new Date().toLocaleTimeString("en-US", { hour12: false })
   const score = confidenceScore(findings)
+  const wh = verdict.warehouse_insights
 
   return (
     <div className="verdict">
@@ -70,6 +70,48 @@ export default function Verdict({ verdict, findings = [] }: { verdict: VerdictTy
             </div>
           ))}
         </div>
+
+        {wh && (
+          <div className="verdict-warehouse">
+            <div className="verdict-section-label">snowflake memory</div>
+            <p className="verdict-warehouse-signal">{wh.timing_signal}</p>
+            {wh.collective_hint && (
+              <p className="verdict-warehouse-hint">{wh.collective_hint}</p>
+            )}
+            {wh.price_history.observation_count > 0 && (
+              <div className="verdict-warehouse-stats">
+                <span>{wh.price_history.observation_count} obs (90d)</span>
+                {wh.price_history.min_price_90d != null && (
+                  <span>low ${wh.price_history.min_price_90d.toFixed(0)}</span>
+                )}
+                {wh.price_history.avg_price_90d != null && (
+                  <span>avg ${wh.price_history.avg_price_90d.toFixed(0)}</span>
+                )}
+              </div>
+            )}
+            {wh.similar_searches && wh.similar_searches.length > 0 && (
+              <ul className="verdict-similar">
+                {wh.similar_searches.map((s) => (
+                  <li key={s.query_text}>
+                    <span className="verdict-similar-query">{s.query_text}</span>
+                    <span className="verdict-similar-pct">
+                      {Math.round(s.similarity * 100)}% match
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {wh.outliers.length > 0 && (
+              <ul className="verdict-outliers">
+                {wh.outliers.map((o) => (
+                  <li key={`${o.site}-${o.price}`}>
+                    <strong>{o.source}</strong> ${o.price} — {o.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="verdict-footer">
           <div className="verdict-aside caution">

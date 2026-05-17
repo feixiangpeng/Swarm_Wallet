@@ -1,3 +1,5 @@
+import { getPlannerSiteBoost, isSnowflakeEnabled } from "./snowflake/index"
+
 export interface AgentPlan {
   site: string
   role: "price" | "reviews" | "deals"
@@ -45,10 +47,19 @@ const POPULAR_SITES: AgentPlan[] = [
 ]
 
 export async function planSwarm(query: string): Promise<SwarmPlan> {
+  let agents = POPULAR_SITES
+  let reasoning = "default popular retail sites"
+
+  if (isSnowflakeEnabled()) {
+    const boosted = await getPlannerSiteBoost(query, POPULAR_SITES)
+    agents = boosted.agents
+    reasoning = boosted.reasoning
+  }
+
   return {
     product: query,
     category: "general",
-    agents: POPULAR_SITES,
-    reasoning: "hardcoded popular retail, deals, and review sites",
+    agents,
+    reasoning,
   }
 }

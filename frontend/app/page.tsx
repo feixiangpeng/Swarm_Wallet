@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useRef } from "react"
 import { useSwarm } from "@/hooks/useSwarm"
 import AgentGrid from "@/components/AgentGrid"
@@ -7,6 +8,7 @@ import Verdict from "@/components/Verdict"
 import SwarmMap from "@/components/SwarmMap"
 import PriceSpread from "@/components/PriceSpread"
 import PriceTable from "@/components/PriceTable"
+import ConnectSnowflakeButton from "@/components/ConnectSnowflakeButton"
 
 const HINTS = [
   "Sony WH-1000XM5",
@@ -104,6 +106,8 @@ export default function Home() {
                 </button>
               ))}
             </div>
+
+            <ConnectSnowflakeButton variant="hero" />
 
             <div className="hero-scroll-cue" aria-hidden>
               <span>how it works</span>
@@ -456,6 +460,9 @@ export default function Home() {
           <span className="footer-wordmark">swarm<span>.</span>wallet</span>
           <span className="footer-sep">·</span>
           <span className="footer-tagline">parallel browser agents for purchase intelligence</span>
+          <Link className="footer-github" href="/memory">
+            snowflake memory →
+          </Link>
           <a
             className="footer-github"
             href="https://github.com"
@@ -472,7 +479,10 @@ export default function Home() {
   return (
     <div className="app-root">
       <header className="app-header">
-        <div className="header-wordmark">swarm<span>.</span>wallet</div>
+        <div className="header-left">
+          <div className="header-wordmark">swarm<span>.</span>wallet</div>
+          <ConnectSnowflakeButton variant="header" />
+        </div>
         {SearchForm}
       </header>
 
