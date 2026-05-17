@@ -17,7 +17,7 @@ let authFailureReason: string | null = null
 let fillTimer: NodeJS.Timeout | null = null
 
 function prewarmConfigured() {
-  return process.env.PREWARM_BROWSERBASE !== "false"
+  return process.env.PREWARM_BROWSERBASE === "true"
 }
 
 function prewarmEnabled() {
