@@ -1,10 +1,13 @@
 import type { AgentState } from "@/hooks/useSwarm"
 
 const STATUS_LABEL: Record<string, string> = {
+  queued: "queued",
+  launching: "launching",
   navigating: "navigating",
   searching:  "searching",
   extracting: "extracting",
   done:       "done",
+  launch_failed: "launch failed",
   error:      "error",
 }
 
@@ -25,7 +28,13 @@ export default function AgentCard({ agent, index }: { agent: AgentState; index: 
       </div>
 
       <div className="card-iframe-wrap">
-        {agent.replayUrl ? (
+        {agent.screenshot ? (
+          <img
+            className="card-screenshot"
+            src={agent.screenshot}
+            alt={`${agent.site} live screenshot`}
+          />
+        ) : agent.replayUrl ? (
           <iframe
             className="card-iframe"
             src={agent.replayUrl}
@@ -37,8 +46,8 @@ export default function AgentCard({ agent, index }: { agent: AgentState; index: 
         )}
       </div>
 
-      {agent.status === "error" && (
-        <div className="card-error">agent failed — site may be unreachable</div>
+      {(agent.status === "error" || agent.status === "launch_failed") && (
+        <div className="card-error">{agent.error ?? "agent failed - site may be unreachable"}</div>
       )}
 
       {agent.finding && (

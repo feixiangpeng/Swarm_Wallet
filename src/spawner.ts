@@ -1,4 +1,5 @@
-import { createBrowserbaseSession, type V3 } from "./stagehand"
+import { acquireBrowserbaseSession } from "./sessionPool"
+import type { V3 } from "./stagehand"
 import type { AgentPlan } from "./planner"
 
 export interface LiveAgent {
@@ -8,28 +9,18 @@ export interface LiveAgent {
   replayUrl: string
 }
 
-const MAX_BROWSER_SESSIONS = Number(process.env.MAX_BROWSER_SESSIONS ?? 4)
+export function agentId(plan: AgentPlan) {
+  return `${plan.role}::${plan.site}`
+}
 
-export async function spawnAgents(agents: AgentPlan[]): Promise<LiveAgent[]> {
-  const selectedAgents = agents.slice(0, MAX_BROWSER_SESSIONS)
-  const results: LiveAgent[] = []
+export async function spawnAgent(plan: AgentPlan): Promise<LiveAgent> {
+  const session = await acquireBrowserbaseSession()
 
-  for (const plan of selectedAgents) {
-    try {
-      const session = createBrowserbaseSession()
-      await session.init()
-
-      const sessionId = session.browserbaseSessionID ?? "unknown"
-      results.push({
-        id: `${plan.role}::${plan.site}`,
-        plan,
-        session,
-        replayUrl: `https://browserbase.com/sessions/${sessionId}`,
-      })
-    } catch (err) {
-      console.error(`Failed to launch ${plan.site}:`, err)
-    }
+  const sessionId = session.browserbaseSessionID ?? "unknown"
+  return {
+    id: agentId(plan),
+    plan,
+    session,
+    replayUrl: session.browserbaseDebugURL ?? session.browserbaseSessionURL ?? `https://browserbase.com/sessions/${sessionId}`,
   }
-
-  return results
 }

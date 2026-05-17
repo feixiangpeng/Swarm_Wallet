@@ -1505,6 +1505,11 @@ body::after {
   border-color: rgba(245,158,11,0.5);
   box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
 }
+.agent-node[data-status="queued"],
+.agent-node[data-status="launching"] {
+  border-color: rgba(245,158,11,0.4);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.08);
+}
 .agent-node[data-status="searching"] {
   border-color: rgba(96,165,250,0.5);
   box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
@@ -1517,6 +1522,7 @@ body::after {
   border-color: rgba(52,211,153,0.5);
   box-shadow: 0 0 0 3px rgba(52,211,153,0.12);
 }
+.agent-node[data-status="launch_failed"],
 .agent-node[data-status="error"] {
   border-color: rgba(248,113,113,0.45);
 }
@@ -1555,6 +1561,15 @@ body::after {
   inset: 0;
   overflow: hidden;
   border-radius: 50%;
+}
+
+.agent-node-screenshot {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: top left;
+  opacity: 0.72;
 }
 
 .agent-node-iframe {
@@ -1903,16 +1918,22 @@ body::after {
   transition: background var(--transition);
 }
 
+.agent-card[data-status="queued"]::before,
+.agent-card[data-status="launching"]::before,
 .agent-card[data-status="navigating"]::before { background: var(--amber); }
 .agent-card[data-status="searching"]::before  { background: var(--blue); }
 .agent-card[data-status="extracting"]::before { background: var(--violet); }
 .agent-card[data-status="done"]::before       { background: var(--green); }
+.agent-card[data-status="launch_failed"]::before,
 .agent-card[data-status="error"]::before      { background: var(--red); }
 
+.agent-card[data-status="queued"],
+.agent-card[data-status="launching"],
 .agent-card[data-status="navigating"] { --glow-color: var(--amber-glow); box-shadow: 0 0 0 1px var(--amber-glow); }
 .agent-card[data-status="searching"]  { --glow-color: var(--blue-glow);  box-shadow: 0 0 0 1px var(--blue-glow); }
 .agent-card[data-status="extracting"] { --glow-color: var(--violet-glow); box-shadow: 0 0 0 1px var(--violet-glow); animation: card-in 0.35s ease both, glow-pulse 2s ease-in-out infinite; }
 .agent-card[data-status="done"]       { box-shadow: 0 0 0 1px var(--green-glow); }
+.agent-card[data-status="launch_failed"],
 .agent-card[data-status="error"]      { box-shadow: 0 0 0 1px var(--red-glow); }
 
 .card-header {
@@ -1961,10 +1982,13 @@ body::after {
   flex-shrink: 0;
 }
 
+[data-status="queued"]     .card-status-dot,
+[data-status="launching"]  .card-status-dot,
 [data-status="navigating"] .card-status-dot { background: var(--amber); animation: pulse 1.2s infinite; }
 [data-status="searching"]  .card-status-dot { background: var(--blue);  animation: pulse 1s infinite; }
 [data-status="extracting"] .card-status-dot { background: var(--violet); animation: pulse 0.8s infinite; }
 [data-status="done"]       .card-status-dot { background: var(--green); }
+[data-status="launch_failed"] .card-status-dot,
 [data-status="error"]      .card-status-dot { background: var(--red); }
 
 .card-status-label {
@@ -1973,10 +1997,13 @@ body::after {
   text-transform: uppercase;
 }
 
+[data-status="queued"]     .card-status-label,
+[data-status="launching"]  .card-status-label,
 [data-status="navigating"] .card-status-label { color: var(--amber); }
 [data-status="searching"]  .card-status-label { color: var(--blue); }
 [data-status="extracting"] .card-status-label { color: var(--violet); }
 [data-status="done"]       .card-status-label { color: var(--green); }
+[data-status="launch_failed"] .card-status-label,
 [data-status="error"]      .card-status-label { color: var(--red); }
 
 .card-iframe-wrap {
@@ -2000,6 +2027,15 @@ body::after {
   height: 100%;
   border: none;
   display: block;
+  opacity: 0.92;
+}
+
+.card-screenshot {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: top left;
   opacity: 0.92;
 }
 
@@ -2319,14 +2355,15 @@ body::after {
   }
 
   .swarm-bubble {
-    width: 118px;
-    min-height: 82px;
+    width: 128px;
+    min-height: 90px;
     padding: 0.7rem;
   }
 
   .bubble-site,
   .bubble-role,
   .bubble-status,
+  .bubble-url,
   .bubble-finding {
     max-width: 94px;
   }

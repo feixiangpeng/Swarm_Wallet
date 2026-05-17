@@ -4,32 +4,38 @@ import { useRef, useEffect, useState } from "react"
 import type { AgentState, SwarmActivity, SwarmStatus } from "@/hooks/useSwarm"
 
 const STATUS_COLOR: Record<string, string> = {
+  queued: "#f59e0b",
+  launching: "#f59e0b",
   navigating: "#f59e0b",
-  searching:  "#60a5fa",
+  searching: "#60a5fa",
   extracting: "#a78bfa",
-  done:       "#34d399",
-  error:      "#f87171",
-  planning:   "#f59e0b",
+  done: "#34d399",
+  launch_failed: "#f87171",
+  error: "#f87171",
+  planning: "#f59e0b",
 }
 
 const STATUS_LABEL: Record<string, string> = {
+  queued: "queued",
+  launching: "launching",
   navigating: "opening",
-  searching:  "searching",
+  searching: "searching",
   extracting: "extracting",
-  done:       "done",
-  error:      "failed",
+  done: "done",
+  launch_failed: "launch failed",
+  error: "failed",
 }
 
 const STAGE_STEPS = ["planning", "spawning", "running", "synthesizing", "complete"] as const
 const STAGE_LABEL: Record<string, string> = {
-  planning:    "Planning routes",
-  spawning:    "Launching browsers",
-  running:     "Agents scanning",
-  synthesizing:"Synthesizing findings",
-  complete:    "Complete",
+  planning: "Planning routes",
+  spawning: "Launching browsers",
+  running: "Agents scanning",
+  synthesizing: "Synthesizing findings",
+  complete: "Complete",
+  error: "Error",
 }
 
-// Skeleton content to show while the browser session is loading
 const SKELETON_LINES = [85, 60, 75, 45, 90, 55]
 
 function NodeSkeleton() {
@@ -59,8 +65,7 @@ function AgentNode({
   radius: number
 }) {
   const color = STATUS_COLOR[agent.status] ?? "#475569"
-  const hasReplay = !!agent.replayUrl
-  const isLive = agent.status !== "done" && agent.status !== "error"
+  const isLive = !["done", "error", "launch_failed"].includes(agent.status)
   const d = radius * 2
 
   return (
@@ -71,21 +76,22 @@ function AgentNode({
       height={d}
       style={{ overflow: "visible" }}
     >
-      <div
+      <a
         className="agent-node"
         data-status={agent.status}
+        href={agent.replayUrl || undefined}
+        target="_blank"
+        rel="noreferrer"
         style={{ "--node-color": color, width: d, height: d } as React.CSSProperties}
-        title={agent.site}
+        title={agent.replayUrl ? `Open ${agent.site} live view` : agent.site}
       >
-        {/* Outer glow ring */}
         <div className="agent-node-ring" />
-
-        {/* Live status pulse on top-right */}
         {isLive && <div className="agent-node-live" style={{ background: color }} />}
 
-        {/* Iframe or skeleton */}
         <div className="agent-node-screen">
-          {hasReplay ? (
+          {agent.screenshot ? (
+            <img className="agent-node-screenshot" src={agent.screenshot} alt="" />
+          ) : agent.replayUrl ? (
             <iframe
               src={agent.replayUrl}
               title={agent.site}
@@ -97,25 +103,36 @@ function AgentNode({
           )}
         </div>
 
-        {/* Label bar at bottom */}
         <div className="agent-node-label">
           <span className="agent-node-site">{agent.site.replace("www.", "")}</span>
-          <span className="agent-node-status" style={{ color }}>{STATUS_LABEL[agent.status] ?? agent.status}</span>
+          <span className="agent-node-status" style={{ color }}>
+            {STATUS_LABEL[agent.status] ?? agent.status}
+          </span>
         </div>
 
-        {/* Finding chip on done */}
         {agent.finding && (
           <div className="agent-node-finding">
-            {agent.finding.price != null ? `$${agent.finding.price}` : "✓"}
+            {agent.finding.price != null ? `$${agent.finding.price}` : "done"}
           </div>
         )}
-      </div>
+      </a>
     </foreignObject>
   )
 }
 
-// Placeholder node while planning
-function PlaceholderNode({ cx, cy, radius, label, delay }: { cx: number; cy: number; radius: number; label: string; delay: number }) {
+function PlaceholderNode({
+  cx,
+  cy,
+  radius,
+  label,
+  delay,
+}: {
+  cx: number
+  cy: number
+  radius: number
+  label: string
+  delay: number
+}) {
   const d = radius * 2
   return (
     <foreignObject x={cx - radius} y={cy - radius} width={d} height={d} style={{ overflow: "visible" }}>
@@ -154,8 +171,8 @@ export default function SwarmMap({
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => {
-      setDims({ w: e.contentRect.width, h: e.contentRect.height })
+    const ro = new ResizeObserver(([entry]) => {
+      setDims({ w: entry.contentRect.width, h: entry.contentRect.height })
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -168,18 +185,21 @@ export default function SwarmMap({
   const orbitR = Math.min(w, h) * 0.36
   const coreR = nodeR * 1.05
 
-  const activeStage = status === "done" ? "complete" : status === "error" ? "error" : (activity.at(-1)?.stage ?? "planning")
-  const completed = agents.filter(a => a.status === "done").length
-  const failed = agents.filter(a => a.status === "error").length
+  const activeStage =
+    status === "done"
+      ? "complete"
+      : status === "error"
+        ? "error"
+        : (activity.at(-1)?.stage ?? "planning")
+  const completed = agents.filter(agent => agent.status === "done").length
+  const failed = agents.filter(agent => agent.status === "error" || agent.status === "launch_failed").length
   const total = agents.length
   const progress = total > 0 ? ((completed + failed) / total) * 100 : activeStage === "planning" ? 8 : 18
   const visibleActivity = activity.slice(-5).reverse()
-
-  const items = agents.length > 0 ? agents : PLACEHOLDERS.map(l => ({ _placeholder: true, label: l }))
+  const items = agents.length > 0 ? agents : PLACEHOLDERS.map(label => ({ _placeholder: true, label }))
 
   return (
     <section className="swarm-shell">
-      {/* ── Graph canvas ── */}
       <div className="swarm-stage" ref={containerRef}>
         <svg
           width={w}
@@ -187,23 +207,23 @@ export default function SwarmMap({
           className="swarm-svg"
           style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1 }}
         >
-          {/* Orbit circles */}
           <circle cx={cx} cy={cy} r={orbitR} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray="4 8" />
           <circle cx={cx} cy={cy} r={orbitR * 0.58} fill="none" stroke="rgba(52,211,153,0.06)" strokeWidth="1" />
 
-          {/* Connector lines to each node */}
           {items.map((item, i) => {
             const angle = -Math.PI / 2 + (i / items.length) * Math.PI * 2
             const nx = cx + Math.cos(angle) * orbitR
             const ny = cy + Math.sin(angle) * orbitR
-            const agent = "agentId" in item ? (item as AgentState) : null
+            const agent = "agentId" in item ? item as AgentState : null
             const color = agent ? (STATUS_COLOR[agent.status] ?? "#334155") : "#1e293b"
             const opacity = agent?.status === "done" ? 0.5 : agent ? 0.3 : 0.12
             return (
               <line
                 key={i}
-                x1={cx} y1={cy}
-                x2={nx} y2={ny}
+                x1={cx}
+                y1={cy}
+                x2={nx}
+                y2={ny}
                 stroke={color}
                 strokeWidth="1"
                 strokeOpacity={opacity}
@@ -213,7 +233,6 @@ export default function SwarmMap({
           })}
         </svg>
 
-        {/* Central core */}
         <div
           className="swarm-core"
           style={{
@@ -227,11 +246,10 @@ export default function SwarmMap({
         >
           <div className="swarm-core-ring" />
           <div className="swarm-core-label">target</div>
-          <div className="swarm-core-query">{query || "…"}</div>
+          <div className="swarm-core-query">{query || "..."}</div>
           <div className="swarm-core-stage">{STAGE_LABEL[activeStage] ?? activeStage}</div>
         </div>
 
-        {/* Agent / placeholder nodes */}
         <svg
           width={w}
           height={h}
@@ -242,17 +260,25 @@ export default function SwarmMap({
             const nx = cx + Math.cos(angle) * orbitR
             const ny = cy + Math.sin(angle) * orbitR
             if ("agentId" in item) {
-              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} radius={nodeR} />
+              const agent = item as AgentState
+              return <AgentNode key={agent.agentId} agent={agent} cx={nx} cy={ny} radius={nodeR} />
             }
-            const p = item as { _placeholder: boolean; label: string }
-            return <PlaceholderNode key={p.label} cx={nx} cy={ny} radius={nodeR} label={p.label} delay={i * 0.15} />
+            const placeholder = item as { _placeholder: boolean; label: string }
+            return (
+              <PlaceholderNode
+                key={placeholder.label}
+                cx={nx}
+                cy={ny}
+                radius={nodeR}
+                label={placeholder.label}
+                delay={i * 0.15}
+              />
+            )
           })}
         </svg>
       </div>
 
-      {/* ── Right panel ── */}
       <aside className="swarm-panel">
-        {/* Stage tracker */}
         <div className="stage-tracker">
           {STAGE_STEPS.map((step, i) => {
             const stepIdx = STAGE_STEPS.indexOf(activeStage as typeof STAGE_STEPS[number])
@@ -272,25 +298,22 @@ export default function SwarmMap({
           })}
         </div>
 
-        {/* Progress bar */}
         <div className="swarm-progress">
           <span style={{ width: `${Math.min(progress, 100)}%` }} />
         </div>
 
-        {/* Metrics row */}
         <div className="swarm-metrics">
-          <div><strong>{total || "—"}</strong><span>agents</span></div>
+          <div><strong>{total || "-"}</strong><span>agents</span></div>
           <div><strong style={{ color: "var(--green)" }}>{completed}</strong><span>done</span></div>
           <div><strong style={{ color: failed > 0 ? "var(--red)" : undefined }}>{failed}</strong><span>failed</span></div>
         </div>
 
-        {/* Activity feed */}
         <div className="panel-feed-label">live feed</div>
         <div className="swarm-activity">
           {visibleActivity.length === 0 ? (
             <div className="activity-empty">
               <span className="activity-dot" style={{ background: "#1e293b", boxShadow: "none" }} />
-              waiting for first signal…
+              waiting for first signal...
             </div>
           ) : (
             visibleActivity.map((item, i) => (

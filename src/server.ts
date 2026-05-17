@@ -1,9 +1,12 @@
 import { createServer } from "http"
 import { WebSocketServer } from "ws"
 import { swarmSearch } from "./main"
+import { startSessionPrewarm, stopSessionPrewarm } from "./sessionPool"
 
 const server = createServer()
 const wss = new WebSocketServer({ server })
+
+startSessionPrewarm()
 
 wss.on("connection", (ws) => {
   ws.on("message", async (data) => {
@@ -22,3 +25,12 @@ wss.on("connection", (ws) => {
 })
 
 server.listen(3001, () => console.log("WS server ready on :3001"))
+
+async function shutdown() {
+  await stopSessionPrewarm()
+  server.close()
+  process.exit(0)
+}
+
+process.once("SIGINT", () => void shutdown())
+process.once("SIGTERM", () => void shutdown())

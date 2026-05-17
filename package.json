@@ -5,10 +5,12 @@
   "private": true,
   "scripts": {
     "smoke": "node --env-file=.env --import tsx smoke.ts",
+    "setup:context": "node --env-file=.env --import tsx src/setup-context.ts",
     "server": "node --env-file=.env --import tsx src/server.ts",
     "dev:backend": "node --env-file=.env --watch --import tsx src/server.ts"
   },
   "dependencies": {
+    "@browserbasehq/sdk": "latest",
     "@browserbasehq/stagehand": "latest",
     "openai": "4.104.0",
     "ws": "latest",
