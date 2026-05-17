@@ -23,6 +23,7 @@ export type AgentStatus =
   | "done"
   | "launch_failed"
   | "blocked"
+  | "needs_verification"
   | "error"
 
 export interface AgentUpdate {
@@ -95,13 +96,26 @@ export async function runAgent(
     emit("navigating")
     const response = await page.goto(searchUrl(plan.site, query), { waitUntil: "domcontentloaded", timeoutMs: 45000 })
 
-    // Detect hard blocks: HTTP 403/429/503 or bot-detection pages
     const httpStatus = (response as { status?: () => number } | null)?.status?.()
     const currentUrl = pageUrl(page) ?? ""
     const pageTitle  = await (page as { title?: () => Promise<string> }).title?.().catch(() => "") ?? ""
+
+    // Human verification needed — CAPTCHA, phone/email confirm, age gate
+    const needsVerification =
+      /captcha|are you human|verify you.?re human|verify your age|age verification|confirm you.?re not a robot|i.?m not a robot|complete the security check/i.test(pageTitle)
+
+    // Hard permission block — 403/429/503 or bot wall with no path forward
     const blocked =
-      httpStatus === 403 || httpStatus === 429 || httpStatus === 503 ||
-      /access.?denied|robot|captcha|are you human|unusual traffic|cloudflare|just a moment/i.test(pageTitle)
+      !needsVerification && (
+        httpStatus === 403 || httpStatus === 429 || httpStatus === 503 ||
+        /access.?denied|unusual traffic|cloudflare|just a moment|robot check/i.test(pageTitle)
+      )
+
+    if (needsVerification) {
+      const screenshot = await captureScreenshot(page)
+      emit("needs_verification", { currentUrl, screenshot, error: `${plan.site} requires human verification` })
+      return null
+    }
 
     if (blocked) {
       const screenshot = await captureScreenshot(page)

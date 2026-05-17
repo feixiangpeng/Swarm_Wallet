@@ -172,29 +172,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── STATS ── */}
-        <div className="stats-strip">
-          <div className="stat-item">
-            <span className="stat-num">12+</span>
-            <span className="stat-label">retailers searched</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <span className="stat-num">&lt; 60s</span>
-            <span className="stat-label">per full scan</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <span className="stat-num">1</span>
-            <span className="stat-label">ranked answer</span>
-          </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <span className="stat-num">0</span>
-            <span className="stat-label">tabs opened by you</span>
-          </div>
-        </div>
-
         {/* ── MOCK DASHBOARD PREVIEW ── */}
         <div className="preview-section">
           <p className="how-eyebrow" style={{ textAlign: "center", marginBottom: "1.25rem" }}>live dashboard</p>
@@ -291,6 +268,77 @@ export default function Home() {
             <div className="preview-shimmer-overlay" aria-hidden />
           </div>
         </div>
+
+        {/* ── SNOWFLAKE MEMORY ── */}
+        <section className="how-section">
+          <div className="how-inner">
+            <p className="how-eyebrow">swarm memory</p>
+            <h2 className="how-title">Gets smarter every search.</h2>
+            <div className="memory-graph-wrap">
+              <svg className="memory-graph-svg" viewBox="0 0 560 340" fill="none">
+                {/* static lines from outer nodes to semantic core (bottom) */}
+                <line x1="100" y1="70" x2="280" y2="280" stroke="#34d399" strokeOpacity="0.2" strokeWidth="1"/>
+                <line x1="460" y1="70" x2="280" y2="280" stroke="#60a5fa" strokeOpacity="0.2" strokeWidth="1"/>
+                {/* animated dashed flows toward semantic node */}
+                <line x1="100" y1="70" x2="280" y2="280" stroke="#34d399" strokeOpacity="0.6" strokeWidth="1.5" strokeDasharray="5 8"
+                  style={{ animation: "memory-dash 1.8s linear infinite" }}/>
+                <line x1="460" y1="70" x2="280" y2="280" stroke="#60a5fa" strokeOpacity="0.6" strokeWidth="1.5" strokeDasharray="5 8"
+                  style={{ animation: "memory-dash 1.8s linear infinite 0.6s" }}/>
+                {/* orbit ring */}
+                <circle cx="280" cy="170" r="140" stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray="4 10"/>
+              </svg>
+
+              {/* Center core */}
+              <div className="memory-core">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="memory-core-snowflake">
+                  {/* center */}
+                  <circle cx="16" cy="16" r="2" fill="#60a5fa"/>
+                  {/* 6 arms */}
+                  {[0,60,120,180,240,300].map(deg => {
+                    const r = deg * Math.PI / 180
+                    const x2 = 16 + Math.cos(r) * 13
+                    const y2 = 16 + Math.sin(r) * 13
+                    const bx1 = 16 + Math.cos(r) * 7 + Math.cos(r + Math.PI/2) * 4
+                    const by1 = 16 + Math.sin(r) * 7 + Math.sin(r + Math.PI/2) * 4
+                    const bx2 = 16 + Math.cos(r) * 7 - Math.cos(r + Math.PI/2) * 4
+                    const by2 = 16 + Math.sin(r) * 7 - Math.sin(r + Math.PI/2) * 4
+                    return (
+                      <g key={deg}>
+                        <line x1="16" y1="16" x2={x2} y2={y2} stroke="#60a5fa" strokeWidth="1.5" strokeLinecap="round"/>
+                        <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="#60a5fa" strokeWidth="1" strokeLinecap="round" strokeOpacity="0.7"/>
+                      </g>
+                    )
+                  })}
+                </svg>
+                <div className="memory-core-label">memory</div>
+              </div>
+
+              {/* Node: price history */}
+              <div className="memory-node memory-node-tl">
+                <div className="memory-node-dot" style={{ background: "#34d399" }} />
+                <div className="memory-node-name">price history</div>
+                <div className="memory-node-stat" style={{ color: "#34d399" }}>90-day window</div>
+                <div className="memory-node-desc">see if a price is actually a good deal based on history</div>
+              </div>
+
+              {/* Node: site reliability */}
+              <div className="memory-node memory-node-tr">
+                <div className="memory-node-dot" style={{ background: "#60a5fa" }} />
+                <div className="memory-node-name">site reliability</div>
+                <div className="memory-node-stat" style={{ color: "#60a5fa" }}>30-day rank</div>
+                <div className="memory-node-desc">scores every site by success rate — best performers search first</div>
+              </div>
+
+              {/* Node: semantic routing */}
+              <div className="memory-node memory-node-b">
+                <div className="memory-node-dot" style={{ background: "#a78bfa" }} />
+                <div className="memory-node-name">semantic routing</div>
+                <div className="memory-node-stat" style={{ color: "#a78bfa" }}>vector search</div>
+                <div className="memory-node-desc">feeds on past data to route smarter</div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* ── HOW IT WORKS ── */}
         <section className="how-section">
