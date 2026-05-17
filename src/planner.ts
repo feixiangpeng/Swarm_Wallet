@@ -44,11 +44,24 @@ const POPULAR_SITES: AgentPlan[] = [
   },
 ]
 
-export async function planSwarm(query: string): Promise<SwarmPlan> {
+export const POPULAR_SITE_LIST = POPULAR_SITES.map(a => a.site)
+
+export async function planSwarm(
+  query: string,
+  options: { allowedSites?: string[] } = {},
+): Promise<SwarmPlan> {
+  const allowed = options.allowedSites && options.allowedSites.length > 0
+    ? new Set(options.allowedSites)
+    : null
+  const agents = allowed
+    ? POPULAR_SITES.filter(a => allowed.has(a.site))
+    : POPULAR_SITES
   return {
     product: query,
     category: "general",
-    agents: POPULAR_SITES,
-    reasoning: "hardcoded popular retail, deals, and review sites",
+    agents,
+    reasoning: allowed
+      ? `filtered to ${agents.length} sites selected by the user`
+      : "hardcoded popular retail, deals, and review sites",
   }
 }

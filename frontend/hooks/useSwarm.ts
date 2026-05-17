@@ -5,7 +5,7 @@ import type { AgentUpdate, Finding } from "../../src/agent"
 import type { Verdict } from "../../src/coordinator"
 import type { AgentPlan, SwarmPlan } from "../../src/planner"
 
-export type SwarmStatus = "idle" | "running" | "done" | "error"
+export type SwarmStatus = "idle" | "running" | "done" | "error" | "cancelled"
 export type SwarmStage = "planning" | "spawning" | "running" | "synthesizing" | "complete"
 
 export interface AgentState extends AgentUpdate {
@@ -43,14 +43,17 @@ export function useSwarm() {
   const wsRef      = useRef<WebSocket | null>(null)
   const runningRef = useRef(false)  // avoids stale closure in onclose
 
-  const search = useCallback((query: string) => {
+  const search = useCallback((input: string, options: { allowedSites?: string[] } = {}) => {
     if (wsRef.current) wsRef.current.close()
+
+    const trimmed = input.trim()
+    const isUrl = /^https?:\/\/\S+$/i.test(trimmed)
 
     setAgents([])
     setVerdict(null)
     setFindings([])
     setActivity([])
-    setQuery(query)
+    setQuery(trimmed)  // Will be replaced by the resolved product name once the server reports it.
     setError(null)
     setStatus("running")
     runningRef.current = true
@@ -58,7 +61,11 @@ export function useSwarm() {
     const ws = new WebSocket(WS_URL)
     wsRef.current = ws
 
-    ws.onopen = () => ws.send(JSON.stringify({ query }))
+    ws.onopen = () => ws.send(JSON.stringify(
+      isUrl
+        ? { mode: "url", url: trimmed, allowedSites: options.allowedSites }
+        : { query: trimmed, allowedSites: options.allowedSites }
+    ))
 
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data as string)
@@ -83,6 +90,9 @@ export function useSwarm() {
       }
 
       if (msg.type === "swarm_event") {
+        if (typeof msg.resolvedQuery === "string") {
+          setQuery(msg.resolvedQuery)
+        }
         if (Array.isArray(msg.agents)) {
           const plannedAgents = msg.agents as AgentPlan[]
           setAgents(prev => {
@@ -113,6 +123,7 @@ export function useSwarm() {
       }
 
       if (msg.type === "verdict") {
+        if (typeof msg.resolvedQuery === "string") setQuery(msg.resolvedQuery)
         setVerdict(msg.verdict as Verdict)
         setFindings((msg.findings as Finding[]) ?? [])
         setStatus("done")
@@ -148,5 +159,17 @@ export function useSwarm() {
     }
   }, [])
 
-  return { agents, verdict, findings, status, activity, query, error, search }
+  const cancel = useCallback(() => {
+    if (!runningRef.current) return
+    const ws = wsRef.current
+    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close()
+    runningRef.current = false
+    setStatus("cancelled")
+    setActivity(prev => [
+      ...prev.slice(-7),
+      { stage: "running", message: "cancelled by you", at: Date.now() },
+    ])
+  }, [])
+
+  return { agents, verdict, findings, status, activity, query, error, search, cancel }
 }

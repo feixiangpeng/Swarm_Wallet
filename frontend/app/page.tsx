@@ -1,12 +1,16 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useSwarm } from "@/hooks/useSwarm"
+import { useSearchHistory, type HistoryEntry } from "@/hooks/useSearchHistory"
 import AgentGrid from "@/components/AgentGrid"
 import Verdict from "@/components/Verdict"
 import SwarmMap from "@/components/SwarmMap"
 import PriceSpread from "@/components/PriceSpread"
 import PriceTable from "@/components/PriceTable"
+import SearchHistory from "@/components/SearchHistory"
+import SourceFilter, { AVAILABLE_SITES, type SiteId } from "@/components/SourceFilter"
+import RefineChips from "@/components/RefineChips"
 
 const HINTS = [
   "Sony WH-1000XM5",
@@ -23,19 +27,66 @@ const HINTS = [
 export default function Home() {
   const [input, setInput]     = useState("")
   const inputRef              = useRef<HTMLInputElement>(null)
-  const { agents, verdict, findings, status, activity, query, error, search } = useSwarm()
+  const live = useSwarm()
+  const history = useSearchHistory()
+  // When non-null, the page renders a saved snapshot in read-only mode
+  // instead of the current live swarm state.
+  const [snapshot, setSnapshot] = useState<HistoryEntry | null>(null)
+  const [selectedSites, setSelectedSites] = useState<SiteId[]>(() => [...AVAILABLE_SITES])
 
-  const isActive = status !== "idle"
+  // When a live swarm finishes successfully, persist it into history.
+  useEffect(() => {
+    if (live.status !== "done") return
+    if (!live.verdict) return
+    if (snapshot) return  // restoring a snapshot also flips status to "done"
+    const topFinding = live.findings.find(f => f.price != null) ?? live.findings[0]
+    history.save({
+      query: live.query,
+      topPick: topFinding?.site,
+      topPrice: topFinding?.price,
+      agents: live.agents,
+      result: {
+        plan: { product: live.query, category: "general", agents: [], reasoning: "" },
+        findings: live.findings,
+        verdict: live.verdict,
+        replayUrls: live.agents.reduce<Record<string, string>>((acc, a) => {
+          if (a.replayUrl) acc[a.agentId] = a.replayUrl
+          return acc
+        }, {}),
+      },
+    })
+    // Intentionally narrow deps: we want exactly one save per completed swarm.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live.status, live.verdict])
+
+  const isActive = snapshot != null || live.status !== "idle"
+
+  // Resolve which data to render (live swarm OR snapshot).
+  const agents   = snapshot ? snapshot.agents : live.agents
+  const verdict  = snapshot ? snapshot.result.verdict : live.verdict
+  const findings = snapshot ? snapshot.result.findings : live.findings
+  const status   = snapshot ? "done" as const : live.status
+  const activity = snapshot ? [] : live.activity
+  const query    = snapshot ? snapshot.query : live.query
+  const error    = snapshot ? null : live.error
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const q = input.trim()
-    if (q) search(q)
+    if (!q) return
+    setSnapshot(null)
+    live.search(q, { allowedSites: selectedSites })
   }
 
   const handleHint = (hint: string) => {
     setInput(hint)
     inputRef.current?.focus()
+  }
+
+  const handleSelectSnapshot = (entry: HistoryEntry) => {
+    if (live.status === "running") live.cancel()
+    setSnapshot(entry)
+    setInput(entry.query)
   }
 
   const agentsDone  = agents.filter(a => a.status === "done").length
@@ -60,6 +111,11 @@ export default function Home() {
           spellCheck={false}
         />
       </div>
+      <SourceFilter
+        selected={selectedSites}
+        onChange={setSelectedSites}
+        disabled={status === "running"}
+      />
       <button
         type="submit"
         className={`search-btn${isActive ? "" : " hero-btn"}`}
@@ -470,7 +526,14 @@ export default function Home() {
   }
 
   return (
-    <div className="app-root">
+    <div className="app-root has-history">
+      <SearchHistory
+        entries={history.entries}
+        activeId={snapshot?.id}
+        onSelect={handleSelectSnapshot}
+        onRemove={history.remove}
+        onClear={history.clear}
+      />
       <header className="app-header">
         <div className="header-wordmark">swarm<span>.</span>wallet</div>
         {SearchForm}
@@ -479,11 +542,35 @@ export default function Home() {
       <div className="status-bar">
         <div className={`status-indicator ${status}`} />
         <span className="status-bar-count">
-          {agentsTotal > 0 ? `${agentsDone}/${agentsTotal} agents complete` : "swarm initializing"}
+          {status === "cancelled"
+            ? "cancelled"
+            : agentsTotal > 0
+            ? `${agentsDone}/${agentsTotal} agents complete`
+            : "swarm initializing"}
         </span>
         <span>·</span>
         <span>{query || input}</span>
+        {status === "running" && (
+          <button type="button" className="status-bar-cancel" onClick={live.cancel}>
+            ✕ cancel
+          </button>
+        )}
       </div>
+
+      {snapshot && (
+        <div className="snapshot-banner">
+          <span className="snapshot-banner-dot" />
+          Viewing a saved search from {new Date(snapshot.ts).toLocaleString()}.
+          Replay links may have expired.
+          <button
+            type="button"
+            className="snapshot-banner-exit"
+            onClick={() => setSnapshot(null)}
+          >
+            ← back to live
+          </button>
+        </div>
+      )}
 
       {status === "error" && (
         <div className="error-banner">
@@ -495,6 +582,18 @@ export default function Home() {
         <SwarmMap agents={agents} activity={activity} status={status} query={query || input} />
         <PriceSpread agents={agents} />
         {verdict && <Verdict verdict={verdict} findings={findings} />}
+        {verdict && (
+          <RefineChips
+            query={query}
+            findings={findings}
+            disabled={live.status === "running"}
+            onRefine={(nextQuery) => {
+              setSnapshot(null)
+              setInput(nextQuery)
+              live.search(nextQuery, { allowedSites: selectedSites })
+            }}
+          />
+        )}
         {verdict && agents.length > 0 && <PriceTable agents={agents} />}
         {agents.length > 0 && <AgentGrid agents={agents} />}
       </main>

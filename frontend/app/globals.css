@@ -87,6 +87,25 @@ body::after {
 ::-webkit-scrollbar-track  { background: var(--bg); }
 ::-webkit-scrollbar-thumb  { background: var(--border-mid); border-radius: 3px; }
 
+/* ─── Reduced motion ─────────────────────────────────────────────
+   Neutralizes the perpetual ambient motion (orbit rings, radar sweep,
+   ticker scroll, shimmer/pulse loops, dash-flow, live-pulse, etc.) for
+   users who request reduced motion. Reveal animations still play but
+   essentially "snap" to their end state, so nothing is left invisible.
+   The `!important` is needed to override the inline animation styles
+   that some SVG elements set directly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Keyframes ─── */
 
 @keyframes pulse {
@@ -1604,8 +1623,369 @@ body::after {
   animation: pulse 1.4s ease-in-out infinite;
 }
 
-.status-indicator.done   { background: var(--green); }
-.status-indicator.error  { background: var(--red); }
+.status-indicator.done      { background: var(--green); }
+.status-indicator.error     { background: var(--red); }
+.status-indicator.cancelled { background: var(--text-dim); }
+
+.status-bar-cancel {
+  margin-left: auto;
+  padding: 0.3rem 0.65rem;
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.status-bar-cancel:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+/* ─── Refine chips (constraints offered after the verdict) ─── */
+.refine-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1.5rem 1.25rem;
+  animation: fade-in 0.35s ease-out 0.2s both;
+}
+.refine-chips-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-right: 0.25rem;
+}
+.refine-chip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-mid);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+}
+.refine-chip:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-dim);
+  transform: translateY(-1px);
+}
+.refine-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Source filter (gear dropdown next to search button) ─── */
+.source-filter { position: relative; flex-shrink: 0; }
+
+.source-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.85rem;
+  height: 42px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-mid);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.source-filter-trigger:hover:not(:disabled) {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+.source-filter-trigger.open {
+  border-color: var(--green);
+  color: var(--green);
+}
+.source-filter-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
+.source-filter-gear { font-size: 14px; line-height: 1; }
+
+.source-filter-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-mid);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+  padding: 0.55rem 0;
+  z-index: 60;
+  animation: fade-in 0.18s ease-out both;
+}
+
+.source-filter-head {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.85rem 0.4rem;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.source-filter-all {
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.source-filter-all:hover:not(:disabled) { color: var(--text); }
+.source-filter-all:disabled { color: var(--text-dim); cursor: default; }
+
+.source-filter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.source-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.source-filter-row:hover { background: var(--bg); }
+.source-filter-row input { accent-color: var(--green); }
+
+/* ─── Snapshot banner (shown when viewing a saved search) ─── */
+.snapshot-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1.5rem;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.snapshot-banner-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber);
+  flex-shrink: 0;
+}
+.snapshot-banner-exit {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  color: var(--text-muted);
+  padding: 0.3rem 0.65rem;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.snapshot-banner-exit:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+/* ─── Search history sidebar ─── */
+.history-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.history-toggle:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+.history-toggle-empty {
+  opacity: 0.55;
+}
+.history-toggle-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.history-toggle-count {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  color: var(--text);
+}
+
+.history-rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  z-index: 50;
+  background: var(--bg-elevated);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  animation: history-rail-in 0.25s ease-out both;
+}
+
+@keyframes history-rail-in {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.history-title {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.history-head-actions {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.4rem;
+}
+.history-clear,
+.history-collapse {
+  background: transparent;
+  border: 1px solid var(--border-mid);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.history-clear:hover { border-color: var(--red); color: var(--red); }
+.history-collapse:hover { border-color: var(--text); color: var(--text); }
+
+.history-empty {
+  padding: 1.25rem 1rem;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  transition: background 0.2s;
+}
+.history-item:hover { background: var(--bg); }
+.history-item.active {
+  background: var(--bg);
+  outline: 1px solid var(--border-mid);
+}
+.history-item-main {
+  flex: 1;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0.6rem 0.7rem;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.history-item-query {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-meta {
+  display: inline-flex;
+  gap: 0.4rem;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item-price { color: var(--green); font-weight: 600; }
+.history-item-pick  { color: var(--text-muted); }
+.history-item-time {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+.history-item-remove {
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0 0.55rem;
+  font-size: 14px;
+  border-radius: 0 6px 6px 0;
+  transition: color 0.2s, background 0.2s;
+}
+.history-item-remove:hover { color: var(--red); background: var(--red-dim); }
+
+/* Nudge the main app content rightward to make room for the rail. */
+.app-root.has-history .app-header,
+.app-root.has-history .status-bar,
+.app-root.has-history .snapshot-banner,
+.app-root.has-history .main-content,
+.app-root.has-history .error-banner {
+  /* Only applied when rail is expanded; collapsed toggle is fixed-position
+     and small so we let the page bleed under it. */
+}
 
 /* ─── Main content ─── */
 
@@ -1660,6 +2040,24 @@ body::after {
   text-align: center;
   z-index: 3;
   padding: 1rem;
+  transition: border-color 0.5s ease-out, box-shadow 0.5s ease-out;
+}
+
+/* When the swarm finishes the core lights up brighter, the label flips to
+   "result", and a one-shot pulse rings outward to draw the eye in. */
+.swarm-core.complete {
+  border-color: rgba(52,211,153,0.7);
+  box-shadow: 0 0 60px rgba(52,211,153,0.35), inset 0 0 30px rgba(52,211,153,0.12);
+  animation: core-celebrate 0.9s ease-out;
+}
+.swarm-core.complete .swarm-core-stage {
+  color: var(--green);
+}
+
+@keyframes core-celebrate {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(52,211,153,0.55), 0 0 40px rgba(52,211,153,0.1); }
+  35%  { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(52,211,153,0), 0 0 80px rgba(52,211,153,0.45); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52,211,153,0), 0 0 60px rgba(52,211,153,0.35); }
 }
 
 .swarm-core-ring {
@@ -1711,14 +2109,17 @@ body::after {
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Projector-style reveal: a thin horizontal slit appears in the
-   middle, expands sideways to a full-width line, then unfolds
-   outward both up and down to expose the full frame. */
+/* Unroll reveal: each card starts as a thin vertical slit at its own center
+   and snaps outward in discrete steps — left and right halves fanning out. */
 @keyframes agent-node-open {
-  0%   { opacity: 0; clip-path: inset(50% 50% 50% 50% round 10px); }
-  18%  { opacity: 1; clip-path: inset(49% 45% 49% 45% round 10px); }
-  45%  { opacity: 1; clip-path: inset(49% 0   49% 0   round 10px); }
-  100% { opacity: 1; clip-path: inset(0   0   0   0   round 10px); }
+  0%   { opacity: 1; transform: scaleX(0); }
+  100% { opacity: 1; transform: scaleX(1); }
+}
+
+/* Connector lines: ease between the status colors instead of snapping when an
+   agent flips queued → searching → done, matching the node border transition. */
+.connector-line {
+  transition: stroke 0.45s ease-out, stroke-opacity 0.45s ease-out, stroke-width 0.45s ease-out;
 }
 
 @keyframes skeleton-shimmer {
@@ -1739,8 +2140,9 @@ body::after {
   background: rgba(13, 13, 21, 0.94);
   display: flex;
   flex-direction: column;
-  animation: agent-node-open 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: border-color 0.25s, box-shadow 0.25s;
+  animation: agent-node-open 0.4s steps(6, end) both;
+  transform-origin: center center;
+  transition: border-color 0.45s ease-out, box-shadow 0.45s ease-out;
   backdrop-filter: blur(8px);
 }
 
@@ -1823,6 +2225,7 @@ body::after {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  transition: color 0.45s ease-out;
 }
 
 .agent-node-live-dot {
@@ -1831,6 +2234,7 @@ body::after {
   border-radius: 50%;
   display: inline-block;
   animation: live-pulse 1.6s ease-in-out infinite;
+  transition: background-color 0.45s ease-out;
 }
 
 /* Iframe / screenshot area fills remaining space */
@@ -1858,6 +2262,21 @@ body::after {
   transform: scale(0.35);
   pointer-events: none;
   display: block;
+}
+
+/* Skeleton overlay that sits on top of the iframe during Browserbase boot.
+   The iframe element fires `onLoad` once the page emits a load event, at
+   which point we flip the `.ready` class and the overlay fades away. */
+.agent-node-iframe-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #0a0a10;
+  opacity: 1;
+  transition: opacity 0.45s ease-out;
+}
+.agent-node-iframe-overlay.ready {
+  opacity: 0;
 }
 
 /* Skeleton loading state */
@@ -2184,18 +2603,6 @@ body::after {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-}
-
-/* Down-pointing arrow */
-.finding-card-arrow {
-  position: absolute;
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 12px;
-  height: 7px;
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  background: rgba(52,211,153,0.25);
 }
 
 /* ─── Confidence meter ─── */

@@ -50,14 +50,34 @@ function NodeSkeleton() {
   )
 }
 
-// Card that pops up above a node when it has a finding
-function FindingCard({ agent, cx, cy, height }: { agent: AgentState; cx: number; cy: number; height: number }) {
+// Card that pops up alongside a node when it has a finding.
+// Positioned radially outward from the swarm core so cards never collide with
+// the orbit ring or neighbouring nodes regardless of where on the circle the
+// node sits.
+function FindingCard({ agent, cx, cy, width, height, coreX, coreY }: {
+  agent: AgentState; cx: number; cy: number; width: number; height: number
+  coreX: number; coreY: number
+}) {
   if (!agent.finding) return null
   const { finding } = agent
   const cardW = 180
   const cardH = finding.highlight ? 88 : 64
-  const x = cx - cardW / 2
-  const y = cy - height / 2 - cardH - 14
+
+  // Unit vector from core to node — this is the "outward" direction.
+  const dx = cx - coreX
+  const dy = cy - coreY
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+
+  // Push the card just past the node's bounding box along the outward vector.
+  // The node is roughly width × height; half-diagonal projected onto the
+  // outward axis is a decent clearance for any angle.
+  const clearance = Math.abs(ux) * (width / 2) + Math.abs(uy) * (height / 2) + 18
+  const anchorX = cx + ux * clearance
+  const anchorY = cy + uy * clearance
+  const x = anchorX + ux * (cardW / 2) - cardW / 2
+  const y = anchorY + uy * (cardH / 2) - cardH / 2
 
   return (
     <foreignObject x={x} y={y} width={cardW} height={cardH + 16} style={{ overflow: "visible" }}>
@@ -76,27 +96,39 @@ function FindingCard({ agent, cx, cy, height }: { agent: AgentState; cx: number;
         {finding.highlight && (
           <div className="finding-card-highlight">{finding.highlight}</div>
         )}
-        <div className="finding-card-arrow" />
       </div>
     </foreignObject>
   )
 }
 
-function AgentNode({ agent, cx, cy, width, height, onExpand }: {
+function AgentNode({ agent, cx, cy, width, height, coreX, coreY, openDelay, onExpand }: {
   agent: AgentState; cx: number; cy: number; width: number; height: number
+  coreX: number; coreY: number
+  openDelay: number
   onExpand: (agent: AgentState) => void
 }) {
   const color = STATUS_COLOR[agent.status] ?? "#475569"
   const isLive = !["done", "error", "launch_failed"].includes(agent.status)
+  // Track the iframe's load state so we can keep a skeleton overlay on top of
+  // it during the multi-second Browserbase boot, then fade out once content
+  // actually renders.
+  const [iframeReady, setIframeReady] = useState(false)
+  useEffect(() => { setIframeReady(false) }, [agent.replayUrl])
 
   return (
     <>
-      {agent.status === "done" && <FindingCard agent={agent} cx={cx} cy={cy} height={height} />}
+      {agent.status === "done" && <FindingCard agent={agent} cx={cx} cy={cy} width={width} height={height} coreX={coreX} coreY={coreY} />}
       <foreignObject x={cx - width / 2} y={cy - height / 2} width={width} height={height} style={{ overflow: "visible" }}>
         <div
           className="agent-node"
           data-status={agent.status}
-          style={{ "--node-color": color, width, height, cursor: "pointer" } as React.CSSProperties}
+          style={{
+            "--node-color": color,
+            width,
+            height,
+            cursor: "pointer",
+            animationDelay: `${openDelay}s`,
+          } as React.CSSProperties}
           title={`${agent.site} — click to expand`}
           onClick={() => onExpand(agent)}
         >
@@ -114,7 +146,18 @@ function AgentNode({ agent, cx, cy, width, height, onExpand }: {
             {(agent as AgentState & { screenshot?: string }).screenshot ? (
               <img className="agent-node-screenshot" src={(agent as AgentState & { screenshot?: string }).screenshot} alt="" />
             ) : agent.replayUrl ? (
-              <iframe src={agent.replayUrl} title={agent.site} className="agent-node-iframe" sandbox="allow-scripts allow-same-origin" />
+              <>
+                <iframe
+                  src={agent.replayUrl}
+                  title={agent.site}
+                  className="agent-node-iframe"
+                  sandbox="allow-scripts allow-same-origin"
+                  onLoad={() => setIframeReady(true)}
+                />
+                <div className={`agent-node-iframe-overlay${iframeReady ? " ready" : ""}`}>
+                  <NodeSkeleton />
+                </div>
+              </>
             ) : (
               <NodeSkeleton />
             )}
@@ -162,7 +205,11 @@ export default function SwarmMap({ agents, activity, status, query }: {
   const [zoomed, setZoomed]   = useState(false)
   const [pulsing, setPulsing] = useState(false)
   const [expanded, setExpanded] = useState<AgentState | null>(null)
+  const [pulses, setPulses] = useState<Array<{ key: string; nx: number; ny: number }>>([])
   const prevAgentCount = useRef(0)
+  const prevStatusRef = useRef<Record<string, string>>({})
+  const dimsRef = useRef(dims)
+  dimsRef.current = dims
   const onExpand = useCallback((a: AgentState) => setExpanded(a), [])
 
   useEffect(() => {
@@ -189,6 +236,31 @@ export default function SwarmMap({ agents, activity, status, query }: {
     }
     prevAgentCount.current = agents.length
   }, [agents.length])
+
+  // Fire a data-pulse from node back to core whenever an agent flips to "done".
+  useEffect(() => {
+    const { w: dw, h: dh } = dimsRef.current
+    const ccx = dw / 2
+    const ccy = dh / 2
+    const orbit = Math.min(dw, dh) * 0.40
+    const fresh: Array<{ key: string; nx: number; ny: number }> = []
+    agents.forEach((a, i) => {
+      const prev = prevStatusRef.current[a.agentId]
+      if (prev !== "done" && a.status === "done") {
+        const angle = -Math.PI / 2 + (i / agents.length) * Math.PI * 2
+        const nx = ccx + Math.cos(angle) * orbit
+        const ny = ccy + Math.sin(angle) * orbit
+        fresh.push({ key: `${a.agentId}-${Date.now()}`, nx, ny })
+      }
+      prevStatusRef.current[a.agentId] = a.status
+    })
+    if (fresh.length === 0) return
+    setPulses(p => [...p, ...fresh])
+    const timers = fresh.map(np =>
+      setTimeout(() => setPulses(p => p.filter(x => x.key !== np.key)), 900)
+    )
+    return () => { timers.forEach(clearTimeout) }
+  }, [agents])
 
   const { w, h } = dims
   const cx = w / 2
@@ -254,6 +326,7 @@ export default function SwarmMap({ agents, activity, status, query }: {
             const isActive = agent && !["done","error","launch_failed"].includes(agent.status)
             return (
               <line key={i}
+                className="connector-line"
                 x1={cx} y1={cy} x2={nx} y2={ny}
                 stroke={color}
                 strokeWidth={isDone ? "1.5" : "1"}
@@ -263,15 +336,31 @@ export default function SwarmMap({ agents, activity, status, query }: {
               />
             )
           })}
+          {/* Data pulses — short glowing dots that travel from node back to core
+              whenever an agent flips to done, signalling "result delivered". */}
+          {pulses.map(p => (
+            <circle key={p.key} cx={p.nx} cy={p.ny} r="4" fill="#34d399"
+              style={{ filter: "drop-shadow(0 0 8px rgba(52,211,153,0.95))" }}>
+              <animate attributeName="cx" from={p.nx} to={cx} dur="0.8s" fill="freeze" />
+              <animate attributeName="cy" from={p.ny} to={cy} dur="0.8s" fill="freeze" />
+              <animate attributeName="r" values="5;4;2" keyTimes="0;0.7;1" dur="0.8s" fill="freeze" />
+              <animate attributeName="opacity" values="1;1;0" keyTimes="0;0.7;1" dur="0.8s" fill="freeze" />
+            </circle>
+          ))}
         </svg>
 
         {/* Center core */}
-        <div className="swarm-core" style={{ left: cx, top: cy, width: coreR * 2, height: coreR * 2, marginLeft: -coreR, marginTop: -coreR }}>
+        <div
+          className={`swarm-core${status === "done" ? " complete" : ""}`}
+          style={{ left: cx, top: cy, width: coreR * 2, height: coreR * 2, marginLeft: -coreR, marginTop: -coreR }}
+        >
           <div className="swarm-core-ring" />
           <div className="swarm-core-ring-outer" />
-          <div className="swarm-core-label">target</div>
+          <div className="swarm-core-label">{status === "done" ? "result" : "target"}</div>
           <div className="swarm-core-query">{query || "…"}</div>
-          <div className="swarm-core-stage">{STAGE_LABEL[activeStage] ?? activeStage}</div>
+          <div className="swarm-core-stage">
+            {status === "done" ? "✓ complete" : (STAGE_LABEL[activeStage] ?? activeStage)}
+          </div>
         </div>
 
         {/* Agent / placeholder nodes + finding cards */}
@@ -280,11 +369,12 @@ export default function SwarmMap({ agents, activity, status, query }: {
             const angle = -Math.PI / 2 + (i / items.length) * Math.PI * 2
             const nx = cx + Math.cos(angle) * orbitR
             const ny = cy + Math.sin(angle) * orbitR
+            const openDelay = i * 0.08
             if ("agentId" in item) {
-              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} width={nodeW} height={nodeH} onExpand={onExpand} />
+              return <AgentNode key={(item as AgentState).agentId} agent={item as AgentState} cx={nx} cy={ny} width={nodeW} height={nodeH} coreX={cx} coreY={cy} openDelay={openDelay} onExpand={onExpand} />
             }
             const p = item as { _placeholder: boolean; label: string }
-            return <PlaceholderNode key={p.label} cx={nx} cy={ny} width={nodeW} height={nodeH} label={p.label} delay={i * 0.15} />
+            return <PlaceholderNode key={p.label} cx={nx} cy={ny} width={nodeW} height={nodeH} label={p.label} delay={openDelay} />
           })}
         </svg>
       </div>

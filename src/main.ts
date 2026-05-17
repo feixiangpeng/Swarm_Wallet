@@ -14,13 +14,15 @@ export interface SwarmEvent {
 async function runWithConcurrency<T, R>(
   items: T[],
   limit: number,
-  worker: (item: T, index: number) => Promise<R>
+  worker: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal,
 ) {
   const results: R[] = []
   let cursor = 0
 
   async function runNext() {
     while (cursor < items.length) {
+      if (signal?.aborted) return
       const index = cursor
       const item = items[cursor]
       cursor += 1
@@ -35,13 +37,29 @@ async function runWithConcurrency<T, R>(
   return results
 }
 
+export class SwarmCancelledError extends Error {
+  constructor() { super("swarm cancelled"); this.name = "SwarmCancelledError" }
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw new SwarmCancelledError()
+}
+
+export interface SwarmSearchOptions {
+  allowedSites?: string[]
+}
+
 export async function swarmSearch(
   query: string,
   onUpdate: (u: AgentUpdate) => void,
-  onEvent?: (event: SwarmEvent) => void
+  onEvent?: (event: SwarmEvent) => void,
+  signal?: AbortSignal,
+  options: SwarmSearchOptions = {},
 ) {
+  throwIfAborted(signal)
   onEvent?.({ stage: "planning", message: "mapping retailers and review sources" })
-  const plan = await planSwarm(query)
+  const plan = await planSwarm(query, { allowedSites: options.allowedSites })
+  throwIfAborted(signal)
   console.log(`${plan.agents.length} agents for "${plan.product}"`)
 
   const maxSessions = getMaxBrowserSessions()
@@ -58,6 +76,7 @@ export async function swarmSearch(
     Math.max(1, maxSessions),
     async (agentPlan) => {
       const id = agentId(agentPlan)
+      if (signal?.aborted) return null
       onUpdate({
         agentId: id,
         site: agentPlan.site,
@@ -67,6 +86,7 @@ export async function swarmSearch(
 
       try {
         const liveAgent = await spawnAgent(agentPlan)
+        if (signal?.aborted) return null
         replayUrls[id] = liveAgent.replayUrl
         return runAgent(liveAgent, query, onUpdate)
       } catch (err) {
@@ -81,9 +101,11 @@ export async function swarmSearch(
         })
         return null
       }
-    }
+    },
+    signal,
   )
 
+  throwIfAborted(signal)
   const findings = results.filter(Boolean) as Finding[]
   if (findings.length === 0) {
     throw new Error("No agents returned findings. Check Browserbase quota, site blocks, or lower MAX_BROWSER_SESSIONS.")
@@ -91,6 +113,7 @@ export async function swarmSearch(
 
   onEvent?.({ stage: "synthesizing", message: "ranking findings into a verdict" })
   const verdict = await synthesize(query, findings)
+  throwIfAborted(signal)
 
   onEvent?.({ stage: "complete", message: "purchase intelligence ready" })
   return { plan, findings, verdict, replayUrls }
