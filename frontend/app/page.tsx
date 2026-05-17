@@ -67,20 +67,318 @@ export default function Home() {
   if (!isActive) {
     return (
       <div className="app-root">
-        <main className="hero">
-          <div className="hero-wordmark" aria-hidden>
-            swarm<span>.</span>wallet
+        {/* ── ABOVE THE FOLD ── */}
+        <section className="hero">
+          <div className="hero-orb hero-orb-a" aria-hidden />
+          <div className="hero-orb hero-orb-b" aria-hidden />
+
+          <div className="hero-content">
+            <h1 className="hero-title" aria-label="swarm.wallet">
+              <span className="hero-title-word">swarm</span>
+              <span className="hero-title-dot">.</span>
+              <span className="hero-title-word2">wallet</span>
+            </h1>
+
+            <p className="hero-tagline">
+              <span className="hero-tagline-line">
+                Type a product. Every relevant store gets searched <em>at once.</em>
+              </span>
+              <span className="hero-tagline-line">
+                You get a single answer — best price, best timing, no tab hell.
+              </span>
+            </p>
+
+            {SearchForm}
+
+            <div className="hero-hints">
+              {HINTS.map(h => (
+                <button key={h} className="hero-hint" onClick={() => handleHint(h)}>
+                  {h}
+                </button>
+              ))}
+            </div>
+
+            <div className="hero-scroll-cue" aria-hidden>
+              <span>how it works</span>
+              <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
+                <path d="M6 1v12M1 8l5 6 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </div>
-          <p className="hero-subtitle">parallel browser agents · live intelligence · ranked verdicts</p>
-          {SearchForm}
-          <div className="hero-hints">
-            {HINTS.map(h => (
-              <button key={h} className="hero-hint" onClick={() => handleHint(h)}>
-                {h}
-              </button>
+        </section>
+
+        {/* ── TICKER ── */}
+        <div className="ticker-wrap" aria-hidden>
+          <div className="ticker-track">
+            {[
+              "amazon", "newegg", "bestbuy", "ebay", "walmart",
+              "rtings", "reddit", "slickdeals", "camelcamelcamel",
+              "bhphotovideo", "microcenter", "adorama",
+              "grailed", "depop", "poshmark", "therealreal",
+              "amazon", "newegg", "bestbuy", "ebay", "walmart",
+              "rtings", "reddit", "slickdeals", "camelcamelcamel",
+              "bhphotovideo", "microcenter", "adorama",
+              "grailed", "depop", "poshmark", "therealreal",
+            ].map((s, i) => (
+              <span key={i} className="ticker-item">{s}</span>
             ))}
           </div>
-        </main>
+        </div>
+
+        {/* ── STATS ── */}
+        <div className="stats-strip">
+          <div className="stat-item">
+            <span className="stat-num">12+</span>
+            <span className="stat-label">retailers searched</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-num">&lt; 60s</span>
+            <span className="stat-label">per full scan</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-num">1</span>
+            <span className="stat-label">ranked answer</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat-item">
+            <span className="stat-num">0</span>
+            <span className="stat-label">tabs opened by you</span>
+          </div>
+        </div>
+
+        {/* ── MOCK DASHBOARD PREVIEW ── */}
+        <div className="preview-section">
+          <p className="how-eyebrow" style={{ textAlign: "center", marginBottom: "1.25rem" }}>live dashboard</p>
+          <div className="preview-shell">
+            {/* fake header */}
+            <div className="preview-header">
+              <span className="preview-wordmark">swarm<span>.</span>wallet</span>
+              <div className="preview-header-right">
+                <div className="preview-input-mock">
+                  <span>Sony WH-1000XM5</span>
+                </div>
+                <div className="preview-btn-mock">scanning…</div>
+              </div>
+            </div>
+            {/* fake status bar */}
+            <div className="preview-statusbar">
+              <span className="preview-status-dot" />
+              <span>4/6 agents complete</span>
+              <span className="preview-status-sep">·</span>
+              <span>Sony WH-1000XM5</span>
+            </div>
+            {/* fake main area */}
+            <div className="preview-body">
+              {/* mock graph */}
+              <div className="preview-graph">
+                <svg width="100%" height="100%" className="preview-svg">
+                  {/* orbit ring */}
+                  <circle cx="50%" cy="50%" r="34%" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray="4 8"/>
+                  {/* connector lines */}
+                  {[0,1,2,3,4,5].map(i => {
+                    const angle = -Math.PI/2 + (i/6)*Math.PI*2
+                    const cx2 = 50 + Math.cos(angle)*34
+                    const cy2 = 50 + Math.sin(angle)*34
+                    const colors = ["#f59e0b","#60a5fa","#a78bfa","#34d399","#34d399","#60a5fa"]
+                    return <line key={i} x1="50%" y1="50%" x2={`${cx2}%`} y2={`${cy2}%`} stroke={colors[i]} strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 5"/>
+                  })}
+                </svg>
+                {/* center core */}
+                <div className="preview-core">
+                  <div className="preview-core-label">target</div>
+                  <div className="preview-core-query">Sony WH-1000XM5</div>
+                  <div className="preview-core-stage">scanning</div>
+                </div>
+                {/* orbital nodes */}
+                {[
+                  { site: "amazon", status: "done",       price: "$279", color: "#34d399", angle: -90 },
+                  { site: "bestbuy", status: "searching", price: null,   color: "#60a5fa", angle: -30 },
+                  { site: "rtings",  status: "done",      price: null,   color: "#34d399", angle:  30 },
+                  { site: "newegg",  status: "extracting",price: null,   color: "#a78bfa", angle:  90 },
+                  { site: "reddit",  status: "done",      price: null,   color: "#34d399", angle: 150 },
+                  { site: "slickdeals", status: "navigating", price: null, color: "#f59e0b", angle: 210 },
+                ].map(n => {
+                  const rad = (n.angle * Math.PI) / 180
+                  return (
+                    <div
+                      key={n.site}
+                      className="preview-node"
+                      data-status={n.status}
+                      style={{
+                        left: `${50 + Math.cos(rad) * 34}%`,
+                        top:  `${50 + Math.sin(rad) * 34}%`,
+                        "--node-color": n.color,
+                      } as React.CSSProperties}
+                    >
+                      {n.price && <span className="preview-node-price">{n.price}</span>}
+                      <span className="preview-node-site">{n.site}</span>
+                      <span className="preview-node-status" style={{ color: n.color }}>{n.status}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              {/* mock panel */}
+              <div className="preview-panel">
+                <div className="preview-panel-section">
+                  {["Planning routes","Launching browsers","Agents scanning","Synthesizing"].map((label, i) => (
+                    <div key={label} className={`preview-stage-row${i === 2 ? " active" : i < 2 ? " done" : ""}`}>
+                      <div className="preview-stage-dot">{i < 2 ? "✓" : i === 2 ? <span className="preview-stage-pulse"/> : null}</div>
+                      <span>{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="preview-progress">
+                  <div className="preview-progress-bar" style={{ width: "66%" }} />
+                </div>
+                <div className="preview-metrics">
+                  <div><strong>6</strong><span>agents</span></div>
+                  <div><strong style={{color:"#34d399"}}>3</strong><span>done</span></div>
+                  <div><strong>0</strong><span>failed</span></div>
+                </div>
+                <div className="preview-feed">
+                  {[
+                    { msg: "amazon · done", color: "#34d399" },
+                    { msg: "rtings · done", color: "#34d399" },
+                    { msg: "reddit · done", color: "#34d399" },
+                    { msg: "newegg · extracting", color: "#a78bfa" },
+                  ].map((r, i) => (
+                    <div key={i} className="preview-feed-row">
+                      <span className="preview-feed-dot" style={{ background: r.color }} />
+                      <span>{r.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {/* shimmer overlay to make it feel "live" */}
+            <div className="preview-shimmer-overlay" aria-hidden />
+          </div>
+        </div>
+
+        {/* ── HOW IT WORKS ── */}
+        <section className="how-section">
+          <div className="how-inner">
+            <p className="how-eyebrow">under the hood</p>
+            <h2 className="how-title">One query. Many browsers. One answer.</h2>
+
+            <div className="how-steps">
+              {/* Step 1 */}
+              <div className="how-step">
+                <div className="how-step-left">
+                  <div className="how-step-num">01</div>
+                  <div className="how-step-line" />
+                </div>
+                <div className="how-step-body">
+                  <div className="how-step-label">You type a query</div>
+                  <p className="how-step-desc">
+                    Tell us what you're buying — anything from headphones to vintage jeans. No special syntax needed.
+                  </p>
+                  <div className="how-step-visual how-visual-query">
+                    <span className="how-visual-prefix">›</span>
+                    <span className="how-visual-text">Sony WH-1000XM5</span>
+                    <span className="how-visual-cursor" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="how-step">
+                <div className="how-step-left">
+                  <div className="how-step-num">02</div>
+                  <div className="how-step-line" />
+                </div>
+                <div className="how-step-body">
+                  <div className="how-step-label">The swarm deploys</div>
+                  <p className="how-step-desc">
+                    Browser sessions open across every retailer, review source, and deal tracker — all at the same time, none waiting for another.
+                  </p>
+                  <div className="how-step-visual how-visual-swarm">
+                    {["amazon", "newegg", "rtings", "reddit", "bestbuy", "slickdeals"].map((s, i) => (
+                      <div key={s} className="how-swarm-dot" style={{ animationDelay: `${i * 0.18}s` }}>
+                        {s}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="how-step">
+                <div className="how-step-left">
+                  <div className="how-step-num">03</div>
+                  <div className="how-step-line" />
+                </div>
+                <div className="how-step-body">
+                  <div className="how-step-label">Watch it happen live</div>
+                  <p className="how-step-desc">
+                    Every browser session streams back in real time. You can watch each agent navigate, search, and extract — like a mission control for shopping.
+                  </p>
+                  <div className="how-step-visual how-visual-cards">
+                    {["price::amazon", "reviews::rtings", "deals::reddit"].map((id, i) => (
+                      <div key={id} className="how-mini-card" style={{ animationDelay: `${i * 0.2}s` }}>
+                        <div className="how-mini-card-bar" />
+                        <div className="how-mini-card-lines">
+                          <div className="how-mini-line how-mini-line-a" />
+                          <div className="how-mini-line how-mini-line-b" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="how-step how-step-last">
+                <div className="how-step-left">
+                  <div className="how-step-num how-step-num-last">04</div>
+                </div>
+                <div className="how-step-body">
+                  <div className="how-step-label">One verdict</div>
+                  <p className="how-step-desc">
+                    All findings get synthesized into a single ranked recommendation — best pick, runner-up, one thing to watch out for, and whether to buy now or wait.
+                  </p>
+                  <div className="how-step-visual how-visual-verdict">
+                    <div className="how-verdict-row how-verdict-row-1">
+                      <span className="how-verdict-rank">#1</span>
+                      <span className="how-verdict-name">Sony WH-1000XM5</span>
+                      <span className="how-verdict-price">$279</span>
+                    </div>
+                    <div className="how-verdict-row how-verdict-row-2">
+                      <span className="how-verdict-tag caution">⚠ price drops around holidays</span>
+                    </div>
+                    <div className="how-verdict-row how-verdict-row-3">
+                      <span className="how-verdict-tag timing">◷ buy now — lowest in 6 months</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA at bottom of how-section */}
+            <div className="how-cta">
+              <button className="how-cta-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                try it →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FOOTER ── */}
+        <footer className="site-footer">
+          <span className="footer-wordmark">swarm<span>.</span>wallet</span>
+          <span className="footer-sep">·</span>
+          <span className="footer-tagline">parallel browser agents for purchase intelligence</span>
+          <a
+            className="footer-github"
+            href="https://github.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            github →
+          </a>
+        </footer>
       </div>
     )
   }
